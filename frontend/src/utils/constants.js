@@ -44,6 +44,7 @@ export const ADMIN_MENU = [
     path: "/admin/klasifikasi-surat",
     icon: "Mail",
   },
+  { title: "Surat", path: "/admin/surat", icon: "Mail" },
   {
     title: "Kategori Pengumuman",
     path: "/admin/kategori-pengumuman",

@@ -13,6 +13,9 @@ import FAQPage from "./pages/admin/FAQ";
 import LayananPage from "./pages/admin/Layanan";
 import GaleriKategoriPage from "./pages/admin/GaleriKategori";
 import ProfilDesaPage from "./pages/admin/ProfilDesa";
+import KlasifikasiSuratPage from "./pages/admin/KlasifikasiSurat";
+import SuratPage from "./pages/admin/Surat";
+import SuratDetail from "./pages/admin/Surat/SuratDetail";
 
 // Lazy load halaman lain nanti
 // import LayananPage from './pages/admin/Layanan';
@@ -72,6 +75,12 @@ const App = () => {
             <Route path="layanan" element={<LayananPage />} />
             <Route path="galeri-kategori" element={<GaleriKategoriPage />} />
             <Route path="profil-desa" element={<ProfilDesaPage />} />
+            <Route
+              path="klasifikasi-surat"
+              element={<KlasifikasiSuratPage />}
+            />
+            <Route path="surat" element={<SuratPage />} />
+            <Route path="surat/:id" element={<SuratDetail />} />
             {/* Halaman lain - uncomment saat sudah dibuat */}
             {/* <Route path="layanan" element={<LayananPage />} /> */}
             {/* <Route path="struktur-organisasi" element={<StrukturPage />} /> */}

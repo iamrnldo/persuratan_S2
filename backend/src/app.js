@@ -53,6 +53,9 @@ if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
 
+// ==================== Static Files ====================
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+
 // ==================== Rate Limiting ====================
 // Apply general rate limiter ke semua API routes
 app.use("/api/", generalLimiter);

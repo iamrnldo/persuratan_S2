@@ -10,7 +10,8 @@ const layananRoutes = require("./layananRoutes");
 const profilDesaRoutes = require("./profilDesaRoutes");
 const strukturOrganisasiRoutes = require("./strukturOrganisasiRoutes");
 
-const { authenticate } = require("../middlewares/auth");             // ← NEW
+const { authenticate } = require("../middlewares/auth");
+const suratRoutes = require("./suratRoutes");// ← NEW
 
 router.use("/auth", authRoutes);                                     // ← NEW (public)
 router.use("/faq", faqRoutes);                                       // GET public
@@ -20,6 +21,8 @@ router.use("/klasifikasi-surat", klasifikasiSuratRoutes);
 router.use("/layanan", layananRoutes);
 router.use("/profil-desa", profilDesaRoutes);
 router.use("/struktur-organisasi", strukturOrganisasiRoutes);
+router.use("/surat", suratRoutes);
+
 
 router.get("/", (req, res) => {
   res.json({
