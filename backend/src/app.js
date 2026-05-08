@@ -14,7 +14,12 @@ const { generalLimiter } = require("./middlewares/rateLimiter");
 const app = express();
 
 // ==================== Security Middleware ====================
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }, // ← fix: izinkan static files lintas origin
+    contentSecurityPolicy: false, // ← fix: nonaktifkan CSP
+  }),
+);
 
 // ==================== CORS ====================
 app.use(
@@ -23,23 +28,20 @@ app.use(
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
-  })
+  }),
 );
 
 // ==================== Logger ====================
 if (process.env.NODE_ENV === "development") {
-  // Development: log ke console
   app.use(morgan("dev"));
 } else if (process.env.NODE_ENV === "production") {
-  // Production: log ke file
   const logsDir = path.join(__dirname, "../logs");
   if (!fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir, { recursive: true });
   }
-  
   const accessLogStream = fs.createWriteStream(
     path.join(logsDir, "access.log"),
-    { flags: "a" }
+    { flags: "a" },
   );
   app.use(morgan("combined", { stream: accessLogStream }));
 }
@@ -54,10 +56,17 @@ if (process.env.NODE_ENV === "production") {
 }
 
 // ==================== Static Files ====================
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "uploads"), {
+    setHeaders: (res) => {
+      res.set("Cross-Origin-Resource-Policy", "cross-origin"); // ← fix CORP header
+      res.set("Access-Control-Allow-Origin", "*");
+    },
+  }),
+);
 
 // ==================== Rate Limiting ====================
-// Apply general rate limiter ke semua API routes
 app.use("/api/", generalLimiter);
 
 // ==================== Health Check ====================

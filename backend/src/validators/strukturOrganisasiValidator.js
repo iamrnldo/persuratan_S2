@@ -16,28 +16,26 @@ const strukturOrganisasiValidator = [
     .trim(),
 
   body("parent_id")
-    .optional({ nullable: true })
+    .optional({ nullable: true, checkFalsy: true }) // ← checkFalsy: "" dianggap kosong
     .isInt({ min: 1 })
     .withMessage("Parent ID harus berupa angka positif"),
 
   body("level")
-    .optional()
+    .optional({ checkFalsy: true })
     .isInt({ min: 1 })
     .withMessage("Level harus berupa angka positif"),
 
   body("urutan")
-    .optional()
+    .optional({ checkFalsy: true })
     .isInt({ min: 0 })
     .withMessage("Urutan harus berupa angka positif"),
 
-  body("foto")
-    .optional()
-    .isLength({ max: 255 })
-    .withMessage("Foto maksimal 255 karakter"),
+  // foto sudah jadi file upload — tidak perlu validasi body
+  // body("foto") → dihapus
 
   body("is_active")
-    .optional()
-    .isBoolean()
+    .optional({ checkFalsy: true })
+    .isIn(["true", "false", true, false])
     .withMessage("is_active harus berupa boolean"),
 ];
 

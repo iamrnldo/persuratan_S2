@@ -16,10 +16,7 @@ import ProfilDesaPage from "./pages/admin/ProfilDesa";
 import KlasifikasiSuratPage from "./pages/admin/KlasifikasiSurat";
 import SuratPage from "./pages/admin/Surat";
 import SuratDetail from "./pages/admin/Surat/SuratDetail";
-
-// Lazy load halaman lain nanti
-// import LayananPage from './pages/admin/Layanan';
-// import ProfilDesaPage from './pages/admin/ProfilDesa';
+import StrukturOrganisasiPage from "./pages/admin/StrukturOrganisasi"; // ← NEW
 
 const App = () => {
   return (
@@ -66,10 +63,8 @@ const App = () => {
           >
             {/* Redirect /admin ke dashboard */}
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
-
             {/* Dashboard */}
             <Route path="dashboard" element={<DashboardPage />} />
-
             {/* FAQ */}
             <Route path="faq" element={<FAQPage />} />
             <Route path="layanan" element={<LayananPage />} />
@@ -81,12 +76,11 @@ const App = () => {
             />
             <Route path="surat" element={<SuratPage />} />
             <Route path="surat/:id" element={<SuratDetail />} />
-            {/* Halaman lain - uncomment saat sudah dibuat */}
-            {/* <Route path="layanan" element={<LayananPage />} /> */}
-            {/* <Route path="struktur-organisasi" element={<StrukturPage />} /> */}
-            {/* <Route path="klasifikasi-surat" element={<KlasifikasiPage />} /> */}
-            {/* <Route path="kategori-pengumuman" element={<KategoriPage />} /> */}
-
+            {/* Struktur Organisasi */} {/* ← NEW */}
+            <Route
+              path="struktur-organisasi"
+              element={<StrukturOrganisasiPage />}
+            />
             {/* Superadmin only */}
             {/* <Route
               path="manage-admin"

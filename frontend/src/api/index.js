@@ -5,3 +5,4 @@ export { layananService } from "./layananService";
 export { profilDesaService } from "./profilDesaService";
 export { klasifikasiSuratService } from "./klasifikasiSuratService";
 export { suratService } from "./suratService";
+export { strukturOrganisasiService } from "./strukturOrganisasiService";

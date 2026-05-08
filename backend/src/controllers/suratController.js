@@ -170,7 +170,7 @@ const createSurat = async (req, res, next) => {
     let file_size = null;
 
     if (req.file) {
-      file_path = req.file.path;
+      file_path = `/uploads/surat/${req.file.filename}`;
       file_name = req.file.originalname;
       file_size = req.file.size;
     }
@@ -247,12 +247,16 @@ const updateSurat = async (req, res, next) => {
     if (req.file) {
       // Hapus file lama jika ada
       if (existCheck.rows[0].file_path) {
-        const oldPath = path.resolve(existCheck.rows[0].file_path);
+        const oldPath = path.join(
+          __dirname,
+          "../..",
+          existCheck.rows[0].file_path,
+        );
         if (fs.existsSync(oldPath)) {
           fs.unlinkSync(oldPath);
         }
       }
-      file_path = req.file.path;
+      file_path = `/uploads/surat/${req.file.filename}`;
       file_name = req.file.originalname;
       file_size = req.file.size;
     }

@@ -14,6 +14,7 @@ import {
   Clock,
   Archive,
   AlertCircle,
+  Eye, // ← tambahan
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { suratService } from "../../../api/suratService";
@@ -21,6 +22,7 @@ import { Button } from "../../../components/common/Button";
 import { Badge } from "../../../components/common/Badge";
 import { ConfirmDialog } from "../../../components/common/ConfirmDialog";
 import { DisposisiModal } from "./DisposisiModal";
+import SuratPreviewModal from "./SuratPreviewModal"; // ← tambahan
 import { formatDateTime } from "../../../utils/helpers";
 
 const STATUS_CONFIG = {
@@ -60,6 +62,9 @@ const SuratDetail = () => {
     id: null,
   });
   const [deleteDisposisiLoading, setDeleteDisposisiLoading] = useState(false);
+
+  // ─── Preview state ──────────────────────────────────────────────────────────
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const fetchSurat = async () => {
     try {
@@ -244,6 +249,18 @@ const SuratDetail = () => {
                       : ""}
                   </p>
                 </div>
+
+                {/* ── Tombol Preview ── */}
+                <button
+                  onClick={() => setPreviewOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm
+                    text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                  title="Preview file"
+                >
+                  <Eye className="w-4 h-4" />
+                  Preview
+                </button>
+
                 <a
                   href={`${import.meta.env.VITE_API_URL?.replace("/api/v1", "")}/${surat.file_path}`}
                   target="_blank"
@@ -381,8 +398,40 @@ const SuratDetail = () => {
               })}
             </div>
           </div>
+
+          {/* ── Quick Preview Card (sidebar) ── */}
+          {surat.file_name && (
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                File Lampiran
+              </h3>
+              <button
+                onClick={() => setPreviewOpen(true)}
+                className="w-full flex items-center gap-3 p-3 rounded-xl border-2
+                  border-dashed border-gray-200 hover:border-primary-300
+                  hover:bg-primary-50 transition-all group"
+              >
+                <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+                  <Eye className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="text-left min-w-0">
+                  <p className="text-sm font-medium text-gray-700 truncate">
+                    {surat.file_name}
+                  </p>
+                  <p className="text-xs text-gray-400">Klik untuk preview</p>
+                </div>
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* ── Preview Modal ── */}
+      <SuratPreviewModal
+        isOpen={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        surat={surat}
+      />
 
       {/* Disposisi Modal */}
       <DisposisiModal
