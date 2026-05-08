@@ -1,5 +1,6 @@
-/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable no-undef */
 /* eslint-disable no-unused-vars */
+/* eslint-disable react-hooks/set-state-in-effect */
 // frontend/src/pages/admin/Surat/SuratPreviewModal.jsx
 import { useEffect, useState, useCallback } from "react";
 import {
@@ -10,7 +11,6 @@ import {
   RotateCcw,
   FileText,
   AlertCircle,
-  ExternalLink,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -195,82 +195,166 @@ const OfficeFallback = ({ url, fileName, fileSize }) => {
     label: ext.toUpperCase(),
   };
 
-  // Try Microsoft Office Online viewer (works only if URL is publicly accessible)
-  const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
-  const [useViewer, setUseViewer] = useState(false);
+  const isWord = ["doc", "docx"].includes(ext);
+  const [htmlContent, setHtmlContent] = useState(null);
+  const [loadingDoc, setLoadingDoc] = useState(false);
+  const [docError, setDocError] = useState(false);
 
+  useEffect(() => {
+    if (!isWord) return;
+    setLoadingDoc(true);
+    setDocError(false);
+    setHtmlContent(null);
+
+    fetch(url)
+      .then((res) => {
+        if (!res.ok) throw new Error("Gagal fetch file");
+        return res.arrayBuffer();
+      })
+      .then((buffer) =>
+        import("mammoth").then((mammoth) =>
+          mammoth.convertToHtml(
+            { arrayBuffer: buffer },
+            {
+              styleMap: [
+                "p[style-name='Heading 1'] => h1:fresh",
+                "p[style-name='Heading 2'] => h2:fresh",
+                "p[style-name='Heading 3'] => h3:fresh",
+                "p[style-name='Title'] => h1.doc-title:fresh",
+                "p[style-name='Subtitle'] => p.doc-subtitle:fresh",
+                "p[style-name='Center'] => p.align-center:fresh",
+              ],
+              convertImage: mammoth.images.imgElement((image) =>
+                image.read("base64").then((data) => ({
+                  src: `data:${image.contentType};base64,${data}`,
+                })),
+              ),
+            },
+          ),
+        ),
+      )
+      .then((result) => setHtmlContent(result.value))
+      .catch(() => setDocError(true))
+      .finally(() => setLoadingDoc(false));
+  }, [url]);
+
+  // ── Word loading ──
+  if (isWord && loadingDoc) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-400">
+        <div className="w-10 h-10 border-4 border-primary-200 border-t-primary-500 rounded-full animate-spin" />
+        <p className="text-sm">Memuat dokumen Word...</p>
+      </div>
+    );
+  }
+
+  // ── Word error ──
+  if (isWord && docError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4 text-gray-400">
+        <AlertCircle className="w-12 h-12 opacity-40" />
+        <p className="text-sm">Gagal memuat dokumen.</p>
+        <a
+          href={url}
+          download={fileName}
+          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm rounded-xl"
+        >
+          <Download className="w-4 h-4" /> Unduh File
+        </a>
+      </div>
+    );
+  }
+
+  // ── Word rendered ──
+  if (isWord && htmlContent) {
+    return (
+      <div className="h-full flex flex-col">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-200 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-blue-50 rounded-lg">
+              <FileText className="w-4 h-4 text-blue-600" />
+            </div>
+            <span className="text-sm font-medium text-gray-700">
+              {fileName}
+            </span>
+            <span className="text-xs text-gray-400">
+              {formatSize(fileSize)}
+            </span>
+          </div>
+          <a
+            href={url}
+            download={fileName}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-blue-600
+              bg-blue-50 hover:bg-blue-100 rounded-lg font-medium transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" /> Unduh
+          </a>
+        </div>
+
+        {/* Document */}
+        <div className="flex-1 overflow-auto bg-gray-100 p-6">
+          <div className="max-w-3xl mx-auto bg-white shadow-md rounded-lg p-10 min-h-full">
+            <style>{`
+              .docx-content { font-family: 'Times New Roman', serif; font-size: 12pt; color: #1f2937; }
+              .docx-content h1 { font-size: 1.4rem; font-weight: 700; margin: 1rem 0 0.75rem; text-align: center; }
+              .docx-content h1.doc-title { text-align: center; font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; }
+              .docx-content h2 { font-size: 1.2rem; font-weight: 600; margin: 0.75rem 0 0.5rem; }
+              .docx-content h3 { font-size: 1.05rem; font-weight: 600; margin: 0.5rem 0; }
+              .docx-content p { margin-bottom: 0.4rem; line-height: 1.8; text-align: justify; }
+              .docx-content p.align-center { text-align: center !important; }
+              .docx-content p.doc-subtitle { text-align: center; font-style: italic; color: #6b7280; }
+              .docx-content strong, .docx-content b { font-weight: 700; }
+              .docx-content em, .docx-content i { font-style: italic; }
+              .docx-content u { text-decoration: underline; }
+              .docx-content table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+              .docx-content td, .docx-content th { border: 1px solid #d1d5db; padding: 0.4rem 0.75rem; vertical-align: top; line-height: 1.6; }
+              .docx-content th { background: #f9fafb; font-weight: 600; }
+              .docx-content ul { list-style: disc; padding-left: 2rem; margin-bottom: 0.5rem; }
+              .docx-content ol { list-style: decimal; padding-left: 2rem; margin-bottom: 0.5rem; }
+              .docx-content li { margin-bottom: 0.25rem; line-height: 1.7; }
+              .docx-content a { color: #2563eb; text-decoration: underline; }
+              .docx-content img { max-width: 100%; height: auto; margin: 0.5rem 0; }
+            `}</style>
+            <div
+              className="docx-content"
+              dangerouslySetInnerHTML={{ __html: htmlContent }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Non-word fallback (xls, ppt, dll) ──
   return (
     <div className="flex flex-col items-center justify-center h-full gap-5">
-      {useViewer ? (
-        <div className="w-full h-full flex flex-col gap-3">
-          <div className="flex items-center justify-between px-2">
-            <p className="text-xs text-gray-400">
-              Menampilkan via Microsoft Office Online (butuh koneksi internet &
-              URL publik)
-            </p>
-            <button
-              onClick={() => setUseViewer(false)}
-              className="text-xs text-gray-400 hover:text-gray-600 underline"
-            >
-              Tutup viewer
-            </button>
-          </div>
-          <iframe
-            src={officeViewerUrl}
-            className="flex-1 w-full rounded-lg border border-gray-200"
-            title={fileName}
-          />
-        </div>
-      ) : (
-        <>
-          {/* File icon */}
-          <div
-            className={`w-20 h-20 rounded-2xl ${meta.bg} flex items-center justify-center shadow-sm`}
-          >
-            <FileText className={`w-10 h-10 ${meta.color}`} />
-          </div>
-
-          {/* File info */}
-          <div className="text-center space-y-1">
-            <p className="font-semibold text-gray-800">{fileName}</p>
-            <p className="text-sm text-gray-400">
-              {meta.label} · {formatSize(fileSize)}
-            </p>
-          </div>
-
-          {/* Info note */}
-          <div className="flex items-start gap-2 max-w-sm bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-left">
-            <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-700 leading-relaxed">
-              File <strong>{meta.label}</strong> tidak dapat ditampilkan
-              langsung di browser. Unduh file untuk membukanya, atau coba buka
-              lewat Microsoft Office Online (membutuhkan URL yang dapat diakses
-              publik).
-            </p>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3">
-            <a
-              href={url}
-              download={fileName}
-              className="flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white
-                text-sm font-medium rounded-xl hover:bg-primary-700 transition-colors shadow-sm"
-            >
-              <Download className="w-4 h-4" />
-              Unduh File
-            </a>
-            <button
-              onClick={() => setUseViewer(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200
-                text-sm font-medium text-gray-600 rounded-xl hover:bg-gray-50 transition-colors"
-            >
-              <ExternalLink className="w-4 h-4" />
-              Coba Office Viewer
-            </button>
-          </div>
-        </>
-      )}
+      <div
+        className={`w-20 h-20 rounded-2xl ${meta.bg} flex items-center justify-center shadow-sm`}
+      >
+        <FileText className={`w-10 h-10 ${meta.color}`} />
+      </div>
+      <div className="text-center space-y-1">
+        <p className="font-semibold text-gray-800">{fileName}</p>
+        <p className="text-sm text-gray-400">
+          {meta.label} · {formatSize(fileSize)}
+        </p>
+      </div>
+      <div className="flex items-start gap-2 max-w-sm bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+        <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+        <p className="text-xs text-amber-700 leading-relaxed">
+          File <strong>{meta.label}</strong> tidak dapat ditampilkan langsung.
+          Unduh untuk membukanya.
+        </p>
+      </div>
+      <a
+        href={url}
+        download={fileName}
+        className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white
+          text-sm font-medium rounded-xl hover:bg-primary-700 transition-colors"
+      >
+        <Download className="w-4 h-4" /> Unduh File
+      </a>
     </div>
   );
 };
