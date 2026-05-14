@@ -17,6 +17,8 @@ import KlasifikasiSuratPage from "./pages/admin/KlasifikasiSurat";
 import SuratPage from "./pages/admin/Surat";
 import SuratDetail from "./pages/admin/Surat/SuratDetail";
 import StrukturOrganisasiPage from "./pages/admin/StrukturOrganisasi"; // ← NEW
+// Tambah import ini
+import ManageAdminPage from "./pages/admin/ManageAdmin";
 
 const App = () => {
   return (
@@ -82,14 +84,14 @@ const App = () => {
               element={<StrukturOrganisasiPage />}
             />
             {/* Superadmin only */}
-            {/* <Route
+            <Route
               path="manage-admin"
               element={
                 <ProtectedRoute requiredRole={ROLES.SUPERADMIN}>
                   <ManageAdminPage />
                 </ProtectedRoute>
               }
-            /> */}
+            />
           </Route>
 
           {/* 404 */}

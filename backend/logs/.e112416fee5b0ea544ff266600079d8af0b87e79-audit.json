@@ -24,6 +24,21 @@
             "date": 1778264521846,
             "name": "/home/iamrnldo/Projects/persuratan/backend/logs/error-2026-05-09.log",
             "hash": "d8c6828f98ec65ab2d0d46f6acdcf85a4891d8e06663e00227918dd7d6c08ada"
+        },
+        {
+            "date": 1778353121700,
+            "name": "/home/iamrnldo/Projects/persuratan/backend/logs/error-2026-05-10.log",
+            "hash": "acf9dfd99da30faaac1b9d405dffa1a45163342cec8144efcba625442ce2f92c"
+        },
+        {
+            "date": 1778509267599,
+            "name": "/home/iamrnldo/Projects/persuratan/backend/logs/error-2026-05-11.log",
+            "hash": "e03127804b0ebddda1818307c3200deeb420d28fa5052c8bf2d455516187a19e"
+        },
+        {
+            "date": 1778640093607,
+            "name": "/home/iamrnldo/Projects/persuratan/backend/logs/error-2026-05-13.log",
+            "hash": "5e1b5bbedf3bd9bee299de2f89d326ddfd5c111c1699eb82e1b83186d4d6712b"
         }
     ],
     "hashType": "sha256"

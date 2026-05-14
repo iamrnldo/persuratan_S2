@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "/home/iamrnldo/Projects/sipadu/backend/logs/.26c3062a913769eaddb2dbeab6e7c6ca3468f724-audit.json",
+    "files": [
+        {
+            "date": 1778352976972,
+            "name": "/home/iamrnldo/Projects/sipadu/backend/logs/application-2026-05-10.log",
+            "hash": "e4198fb5ae3ba96a9ca1d1235b2724fb395090468a4877a5be5fc46c8b07c862"
+        }
+    ],
+    "hashType": "sha256"
+}

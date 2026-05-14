@@ -45,16 +45,7 @@ export const ADMIN_MENU = [
     icon: "Mail",
   },
   { title: "Surat", path: "/admin/surat", icon: "Mail" },
-  // {
-  //   title: "Kategori Pengumuman",
-  //   path: "/admin/kategori-pengumuman",
-  //   icon: "Megaphone",
-  // },
-  // {
-  //   title: "Galeri Kategori",
-  //   path: "/admin/galeri-kategori",
-  //   icon: "Image",
-  // },
+
   {
     title: "Kelola Admin",
     path: "/admin/manage-admin",
