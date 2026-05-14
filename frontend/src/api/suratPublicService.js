@@ -1,57 +1,49 @@
 // src/api/suratPublicService.js
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api/v1";
+const SERVER_URL = API_URL.replace(/\/api\/v1\/?$/, "");
 
-// Create axios instance with base configuration
 const apiClient = axios.create({
   baseURL: API_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  headers: { "Content-Type": "application/json" },
 });
 
-// Response interceptor for error handling
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
-    const customError = {
+  (error) =>
+    Promise.reject({
       message: error.response?.data?.message || "Terjadi kesalahan",
       status: error.response?.status,
       data: error.response?.data,
-    };
-    return Promise.reject(customError);
-  },
+    }),
 );
 
 const suratPublicService = {
-  /**
-   * Get surat by nomor surat (public)
-   */
-  getSuratByNomor: async (nomorSurat) => {
-    const response = await apiClient.get(
-      `/surat/public/${encodeURIComponent(nomorSurat)}`,
-    );
-    return response.data.data || response.data;
+  /** Semua surat dengan pagination + optional search */
+  getAllSurat: async ({ page = 1, limit = 10, search = "" } = {}) => {
+    const params = new URLSearchParams({ page, limit });
+    if (search) params.append("search", search);
+    const response = await apiClient.get(`/surat?${params.toString()}`);
+    return {
+      data: response.data.data || [],
+      pagination: response.data.pagination || {},
+    };
   },
 
-  /**
-   * Download surat PDF
-   */
-  downloadSurat: async (suratId) => {
-    const response = await apiClient.get(`/surat/${suratId}/download`, {
-      responseType: "blob",
-    });
-    return response.data;
+  /** Download blob dari static file */
+  downloadSurat: async (surat) => {
+    if (!surat?.file_path) throw { message: "File surat tidak tersedia" };
+    const fileUrl = `${SERVER_URL}${surat.file_path}`;
+    const res = await axios.get(fileUrl, { responseType: "blob" });
+    return res.data;
   },
 
-  /**
-   * Get file URL for preview
-   */
-  getFileUrl: (fileUrl) => {
-    if (!fileUrl) return "";
-    const baseUrl = API_URL.replace(/\/api\/v1$/, "");
-    return `${baseUrl}${fileUrl}`;
+  /** URL lengkap untuk preview/download */
+  getFileUrl: (filePath) => {
+    if (!filePath) return "";
+    if (filePath.startsWith("http")) return filePath;
+    return `${SERVER_URL}${filePath.startsWith("/") ? filePath : `/${filePath}`}`;
   },
 };
 
