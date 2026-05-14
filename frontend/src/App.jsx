@@ -4,6 +4,7 @@ import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/admin/ProtectedRoute";
 import AdminLayout from "./layouts/AdminLayout";
+import PublicLayout from "./layouts/PublicLayout"; // ← NEW
 import { ROLES } from "./utils/constants";
 
 // Admin Pages
@@ -16,9 +17,14 @@ import ProfilDesaPage from "./pages/admin/ProfilDesa";
 import KlasifikasiSuratPage from "./pages/admin/KlasifikasiSurat";
 import SuratPage from "./pages/admin/Surat";
 import SuratDetail from "./pages/admin/Surat/SuratDetail";
-import StrukturOrganisasiPage from "./pages/admin/StrukturOrganisasi"; // ← NEW
-// Tambah import ini
+import StrukturOrganisasiPage from "./pages/admin/StrukturOrganisasi";
 import ManageAdminPage from "./pages/admin/ManageAdmin";
+
+// Public Pages ← NEW
+import HomePage from "./pages/public/Home";
+import KontakPage from "./pages/public/Kontak";
+import LayananPublicPage from "./pages/public/Layanan";
+import ProfilDesaPublicPage from "./pages/public/ProfilDesa";
 
 const App = () => {
   return (
@@ -48,8 +54,13 @@ const App = () => {
         />
 
         <Routes>
-          {/* Redirect root ke admin login */}
-          <Route path="/" element={<Navigate to="/admin/login" replace />} />
+          {/* ── Public Routes ── */}
+          <Route element={<PublicLayout />}>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/profil-desa" element={<ProfilDesaPublicPage />} />
+            <Route path="/layanan" element={<LayananPublicPage />} />
+            <Route path="/kontak" element={<KontakPage />} />
+          </Route>
 
           {/* Admin Login - Public */}
           <Route path="/admin/login" element={<LoginPage />} />
@@ -63,11 +74,8 @@ const App = () => {
               </ProtectedRoute>
             }
           >
-            {/* Redirect /admin ke dashboard */}
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
-            {/* Dashboard */}
             <Route path="dashboard" element={<DashboardPage />} />
-            {/* FAQ */}
             <Route path="faq" element={<FAQPage />} />
             <Route path="layanan" element={<LayananPage />} />
             <Route path="galeri-kategori" element={<GaleriKategoriPage />} />
@@ -78,12 +86,10 @@ const App = () => {
             />
             <Route path="surat" element={<SuratPage />} />
             <Route path="surat/:id" element={<SuratDetail />} />
-            {/* Struktur Organisasi */} {/* ← NEW */}
             <Route
               path="struktur-organisasi"
               element={<StrukturOrganisasiPage />}
             />
-            {/* Superadmin only */}
             <Route
               path="manage-admin"
               element={
@@ -95,7 +101,7 @@ const App = () => {
           </Route>
 
           {/* 404 */}
-          <Route path="*" element={<Navigate to="/admin/login" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
