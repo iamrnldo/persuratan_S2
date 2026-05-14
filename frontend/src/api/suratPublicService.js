@@ -21,9 +21,17 @@ apiClient.interceptors.response.use(
 
 const suratPublicService = {
   /** Semua surat dengan pagination + optional search */
-  getAllSurat: async ({ page = 1, limit = 10, search = "" } = {}) => {
+  getAllSurat: async ({
+    page = 1,
+    limit = 10,
+    search = "",
+    jenis = "",
+    klasifikasi_id = "",
+  } = {}) => {
     const params = new URLSearchParams({ page, limit });
     if (search) params.append("search", search);
+    if (jenis) params.append("jenis", jenis);
+    if (klasifikasi_id) params.append("klasifikasi_id", klasifikasi_id);
     const response = await apiClient.get(`/surat?${params.toString()}`);
     return {
       data: response.data.data || [],
@@ -43,7 +51,14 @@ const suratPublicService = {
   getFileUrl: (filePath) => {
     if (!filePath) return "";
     if (filePath.startsWith("http")) return filePath;
-    return `${SERVER_URL}${filePath.startsWith("/") ? filePath : `/${filePath}`}`;
+    // Relative URL → lewat Vite proxy, same-origin, tidak diblokir browser
+    return filePath.startsWith("/") ? filePath : `/${filePath}`;
+  },
+
+  // Tambah untuk fetch klasifikasi list
+  getKlasifikasi: async () => {
+    const response = await apiClient.get("/klasifikasi-surat");
+    return response.data.data || [];
   },
 };
 
