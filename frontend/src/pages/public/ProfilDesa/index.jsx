@@ -1,939 +1,293 @@
-// frontend/src/pages/public/ProfilDesa/index.jsx
-import { useState } from "react";
+/* eslint-disable no-unused-vars */
+import { useEffect, useState, useRef } from "react";
 import {
   MapPin,
   Phone,
   Mail,
   Globe,
-  Clock,
   Users,
-  Building2,
-  Map,
-  ChevronRight,
+  Building,
   Leaf,
-  Target,
-  BookOpen,
-  BarChart3,
+  Clock,
 } from "lucide-react";
+import axios from "axios";
 
-const FacebookIcon = ({ size = 14 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
-  </svg>
-);
-const InstagramIcon = ({ size = 14 }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-    <circle cx="12" cy="12" r="4" />
-    <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
-  </svg>
-);
-const YoutubeIcon = ({ size = 14 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.95A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z" />
-    <polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="white" />
-  </svg>
-);
+const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
-// Dummy data (replace with: profilDesaService.get())
-const PROFIL = {
-  nama_desa: "Desa Maju Bersama",
-  kecamatan: "Kecamatan Sejahtera",
-  kabupaten: "Kabupaten Makmur",
-  provinsi: "Jawa Timur",
-  kode_pos: "61254",
-  alamat: "Jl. Raya Desa Maju No. 1, Kecamatan Sejahtera",
-  no_telp: "(031) 123-4567",
-  whatsapp: "081234567890",
-  email: "info@desamaju.go.id",
-  website: "https://desamaju.go.id",
-  facebook: "#",
-  instagram: "#",
-  youtube: "#",
-  luas_wilayah: 125.5,
-  jumlah_penduduk: 5240,
-  jumlah_kk: 1420,
-  jumlah_dusun: 4,
-  jumlah_rw: 8,
-  jam_layanan: "Senin – Jumat, 08.00 – 15.00 WIB",
-  jam_istirahat: "12.00 – 13.00 WIB",
-  visi: "Terwujudnya Desa Maju Bersama yang sejahtera, mandiri, dan berdaya saing berbasis kearifan lokal dengan tata kelola pemerintahan yang baik, transparan, dan akuntabel.",
-  misi: "1. Meningkatkan kualitas pelayanan publik yang cepat, mudah, dan transparan.\n2. Mengembangkan potensi ekonomi lokal berbasis UMKM dan pertanian.\n3. Memperkuat infrastruktur desa yang merata dan berkelanjutan.\n4. Meningkatkan partisipasi masyarakat dalam pembangunan desa.",
+function useInView(threshold = 0.15) {
+  const ref = useRef(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => entry.isIntersecting && setInView(true),
+      { threshold },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return [ref, inView];
+}
+
+function Section({ children, delay = 0, className = "" }) {
+  const [ref, inView] = useInView();
+  return (
+    <div
+      ref={ref}
+      className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"} ${className}`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      {children}
+    </div>
+  );
+}
+
+const defaultProfil = {
+  nama_desa: "Desa Sukamaju",
+  kecamatan: "Kecamatan Maju",
+  kabupaten: "Kabupaten Jaya",
+  provinsi: "Jawa Barat",
+  kode_pos: "12345",
+  telepon: "(0264) 123-4567",
+  email: "info@desa-sukamaju.go.id",
+  website: "www.desa-sukamaju.go.id",
   sejarah:
-    "Desa Maju Bersama berdiri sejak tahun 1945, bersamaan dengan kemerdekaan Republik Indonesia. Awalnya merupakan sebuah perkampungan kecil yang kemudian berkembang menjadi desa yang maju dan mandiri. Seiring berjalannya waktu, desa ini terus berkembang dengan berbagai inovasi dalam bidang pertanian, pendidikan, dan pelayanan publik.",
-  foto_kantor: null,
-  maps_embed: null,
+    "Desa Sukamaju merupakan salah satu desa yang terletak di Kecamatan Maju, Kabupaten Jaya, Jawa Barat. Desa ini telah berdiri sejak tahun 1945 dan memiliki sejarah panjang dalam perkembangan wilayahnya. Dengan semangat gotong royong yang kuat, warga Desa Sukamaju terus membangun dan mengembangkan potensi desa untuk kesejahteraan bersama.",
+  visi: "Menjadikan Desa Sukamaju yang Mandiri, Sejahtera, dan Berdaya Saing Berbasis Potensi Lokal.",
+  misi: "1. Meningkatkan kualitas pelayanan publik\n2. Mengembangkan ekonomi berbasis potensi lokal\n3. Meningkatkan kualitas SDM warga desa\n4. Menjaga kelestarian lingkungan dan budaya",
+  embed_maps: "",
+  jumlah_penduduk: "4,521",
+  luas_wilayah: "12.5 km²",
+  jumlah_rt: "24",
+  jumlah_rw: "6",
 };
 
-const Tab = ({ tabs, active, onChange }) => (
-  <div
-    style={{
-      display: "flex",
-      gap: "0.25rem",
-      background: "#f0fdf4",
-      borderRadius: "12px",
-      padding: "0.375rem",
-      flexWrap: "wrap",
-    }}
-  >
-    {tabs.map((t) => (
-      <button
-        key={t.id}
-        onClick={() => onChange(t.id)}
-        style={{
-          padding: "0.5rem 1.125rem",
-          borderRadius: "8px",
-          border: "none",
-          cursor: "pointer",
-          fontFamily: "'Plus Jakarta Sans', sans-serif",
-          fontSize: "0.825rem",
-          fontWeight: active === t.id ? 600 : 400,
-          background: active === t.id ? "white" : "transparent",
-          color: active === t.id ? "#15803d" : "#4b5563",
-          boxShadow:
-            active === t.id ? "0 2px 8px rgba(22,163,74,0.12)" : "none",
-          transition: "all 0.2s",
-          display: "flex",
-          alignItems: "center",
-          gap: "0.375rem",
-        }}
-      >
-        {t.icon} {t.label}
-      </button>
-    ))}
-  </div>
-);
+const infoCards = [
+  {
+    icon: Users,
+    label: "Jumlah Penduduk",
+    key: "jumlah_penduduk",
+    suffix: " jiwa",
+  },
+  { icon: Globe, label: "Luas Wilayah", key: "luas_wilayah", suffix: "" },
+  { icon: Building, label: "Jumlah RW", key: "jumlah_rw", suffix: " RW" },
+  { icon: MapPin, label: "Jumlah RT", key: "jumlah_rt", suffix: " RT" },
+];
 
-const InfoRow = ({ label, value, icon: Icon }) =>
-  value ? (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "flex-start",
-        gap: "0.875rem",
-        padding: "0.875rem 0",
-        borderBottom: "1px solid #f0fdf4",
-      }}
-    >
-      <div
-        style={{
-          width: "2rem",
-          height: "2rem",
-          background: "#f0fdf4",
-          borderRadius: "8px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-          marginTop: "2px",
-        }}
-      >
-        <Icon size={14} color="#16a34a" />
-      </div>
-      <div>
-        <div
-          style={{
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
-            fontSize: "0.7rem",
-            color: "#9ca3af",
-            fontWeight: 500,
-            marginBottom: "0.2rem",
-          }}
-        >
-          {label}
-        </div>
-        <div
-          style={{
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
-            fontSize: "0.875rem",
-            color: "#1f2937",
-            fontWeight: 500,
-          }}
-        >
-          {value}
-        </div>
-      </div>
-    </div>
-  ) : null;
+export default function ProfilDesaPage() {
+  const [profil, setProfil] = useState(defaultProfil);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("sejarah");
 
-const StatBox = ({ label, value, unit = "", icon: Icon }) => (
-  <div
-    style={{
-      background: "white",
-      borderRadius: "16px",
-      padding: "1.5rem",
-      border: "1px solid #dcfce7",
-      boxShadow: "0 2px 8px rgba(22,163,74,0.06)",
-      textAlign: "center",
-      transition: "all 0.3s",
-    }}
-    onMouseOver={(e) => {
-      e.currentTarget.style.boxShadow = "0 8px 24px rgba(22,163,74,0.14)";
-      e.currentTarget.style.transform = "translateY(-3px)";
-    }}
-    onMouseOut={(e) => {
-      e.currentTarget.style.boxShadow = "0 2px 8px rgba(22,163,74,0.06)";
-      e.currentTarget.style.transform = "translateY(0)";
-    }}
-  >
-    <div
-      style={{
-        width: "2.75rem",
-        height: "2.75rem",
-        background: "linear-gradient(135deg, #dcfce7, #bbf7d0)",
-        borderRadius: "12px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        margin: "0 auto 0.875rem",
-      }}
-    >
-      <Icon size={20} color="#16a34a" />
-    </div>
-    <div
-      style={{
-        fontFamily: "'Lora', serif",
-        fontSize: "1.75rem",
-        fontWeight: 700,
-        color: "#14532d",
-        lineHeight: 1,
-      }}
-    >
-      {typeof value === "number" ? value.toLocaleString("id-ID") : value}
-      <span
-        style={{
-          fontSize: "0.875rem",
-          fontWeight: 400,
-          color: "#16a34a",
-          marginLeft: "0.25rem",
-        }}
-      >
-        {unit}
-      </span>
-    </div>
-    <div
-      style={{
-        fontFamily: "'Plus Jakarta Sans', sans-serif",
-        fontSize: "0.775rem",
-        color: "#6b7280",
-        marginTop: "0.375rem",
-      }}
-    >
-      {label}
-    </div>
-  </div>
-);
-
-const ProfilDesaPage = () => {
-  const [activeTab, setActiveTab] = useState("identitas");
-  const p = PROFIL;
+  useEffect(() => {
+    axios
+      .get(`${API}/profil-desa`)
+      .then(({ data }) => {
+        const d = data.data || data;
+        if (d) setProfil({ ...defaultProfil, ...d });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   const tabs = [
-    { id: "identitas", label: "Identitas", icon: <Building2 size={13} /> },
-    { id: "statistik", label: "Statistik", icon: <BarChart3 size={13} /> },
-    { id: "visi-misi", label: "Visi & Misi", icon: <Target size={13} /> },
-    { id: "sejarah", label: "Sejarah", icon: <BookOpen size={13} /> },
-    { id: "lokasi", label: "Lokasi", icon: <Map size={13} /> },
+    { id: "sejarah", label: "Sejarah" },
+    { id: "visi-misi", label: "Visi & Misi" },
+    { id: "kontak", label: "Kontak" },
   ];
 
   return (
-    <div>
-      <style>{`
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .tab-content { animation: fadeUp 0.35s ease both; }
-      `}</style>
-
-      {/* ── Header ── */}
-      <section
-        style={{
-          background:
-            "linear-gradient(135deg, #052e16 0%, #14532d 50%, #15803d 100%)",
-          padding: "5rem 1.5rem 4rem",
-          position: "relative",
-          overflow: "hidden",
-          textAlign: "center",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage:
-              "radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)",
-            backgroundSize: "28px 28px",
-          }}
-        />
-        <div style={{ position: "relative" }}>
-          <div
-            style={{
-              width: "5rem",
-              height: "5rem",
-              background: "rgba(255,255,255,0.12)",
-              borderRadius: "20px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 1.25rem",
-              border: "1px solid rgba(255,255,255,0.2)",
-              backdropFilter: "blur(10px)",
-            }}
-          >
-            <Leaf size={32} color="#4ade80" />
+    <div className="min-h-screen bg-gray-50">
+      {/* hero */}
+      <section className="relative bg-gradient-to-br from-green-800 via-green-700 to-emerald-600 py-24 overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-0 right-0 w-72 h-72 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4" />
+          <div className="absolute bottom-0 left-0 w-56 h-56 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/4" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-green-600/20 rounded-full" />
+        </div>
+        <div className="relative max-w-4xl mx-auto px-4 text-center">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 backdrop-blur rounded-3xl mb-6 border border-white/30">
+            <Leaf className="w-10 h-10 text-white" />
           </div>
-          <h1
-            style={{
-              fontFamily: "'Lora', serif",
-              fontSize: "clamp(1.75rem, 4vw, 2.75rem)",
-              fontWeight: 700,
-              color: "white",
-              marginBottom: "0.75rem",
-            }}
-          >
-            {p.nama_desa}
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-white mb-3">
+            {profil.nama_desa}
           </h1>
-          <p
-            style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: "0.9rem",
-              color: "#86efac",
-              lineHeight: 1.7,
-            }}
-          >
-            {p.kecamatan} · {p.kabupaten} · {p.provinsi}
+          <p className="text-green-100 text-lg mb-2">
+            {profil.kecamatan}, {profil.kabupaten}
+          </p>
+          <p className="text-green-200/70 text-sm">
+            {profil.provinsi} {profil.kode_pos}
           </p>
         </div>
-
-        <svg
-          style={{ position: "absolute", bottom: 0, left: 0, right: 0 }}
-          viewBox="0 0 1440 50"
-          fill="none"
-          preserveAspectRatio="none"
-        >
-          <path
-            d="M0 50L1440 50L1440 25C1100 50 700 0 350 30C150 45 60 15 0 30L0 50Z"
-            fill="#fefdf8"
-          />
-        </svg>
-      </section>
-
-      {/* ── Content ── */}
-      <section style={{ padding: "3rem 1.5rem 5rem", background: "#fefdf8" }}>
-        <div style={{ maxWidth: "960px", margin: "0 auto" }}>
-          {/* Tabs */}
-          <div style={{ marginBottom: "2.5rem" }}>
-            <Tab tabs={tabs} active={activeTab} onChange={setActiveTab} />
-          </div>
-
-          {/* Tab Content */}
-          <div className="tab-content" key={activeTab}>
-            {/* ── Identitas ── */}
-            {activeTab === "identitas" && (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "2rem",
-                }}
-                className="profil-grid"
-              >
-                <div>
-                  <h2
-                    style={{
-                      fontFamily: "'Lora', serif",
-                      fontWeight: 700,
-                      color: "#14532d",
-                      fontSize: "1.25rem",
-                      marginBottom: "1.25rem",
-                    }}
-                  >
-                    Informasi Umum
-                  </h2>
-                  <div
-                    style={{
-                      background: "white",
-                      borderRadius: "16px",
-                      padding: "1.25rem",
-                      border: "1px solid #dcfce7",
-                    }}
-                  >
-                    <InfoRow
-                      label="Nama Desa"
-                      value={p.nama_desa}
-                      icon={Building2}
-                    />
-                    <InfoRow
-                      label="Kecamatan"
-                      value={p.kecamatan}
-                      icon={MapPin}
-                    />
-                    <InfoRow
-                      label="Kabupaten"
-                      value={p.kabupaten}
-                      icon={MapPin}
-                    />
-                    <InfoRow
-                      label="Provinsi"
-                      value={p.provinsi}
-                      icon={MapPin}
-                    />
-                    <InfoRow
-                      label="Kode Pos"
-                      value={p.kode_pos}
-                      icon={MapPin}
-                    />
-                    <InfoRow label="Alamat" value={p.alamat} icon={MapPin} />
-                  </div>
-                </div>
-
-                <div>
-                  <h2
-                    style={{
-                      fontFamily: "'Lora', serif",
-                      fontWeight: 700,
-                      color: "#14532d",
-                      fontSize: "1.25rem",
-                      marginBottom: "1.25rem",
-                    }}
-                  >
-                    Kontak & Sosial Media
-                  </h2>
-                  <div
-                    style={{
-                      background: "white",
-                      borderRadius: "16px",
-                      padding: "1.25rem",
-                      border: "1px solid #dcfce7",
-                      marginBottom: "1.25rem",
-                    }}
-                  >
-                    <InfoRow label="Telepon" value={p.no_telp} icon={Phone} />
-                    <InfoRow label="WhatsApp" value={p.whatsapp} icon={Phone} />
-                    <InfoRow label="Email" value={p.email} icon={Mail} />
-                    <InfoRow label="Website" value={p.website} icon={Globe} />
-                  </div>
-
-                  <div
-                    style={{
-                      background: "white",
-                      borderRadius: "16px",
-                      padding: "1.25rem",
-                      border: "1px solid #dcfce7",
-                    }}
-                  >
-                    <h3
-                      style={{
-                        fontFamily: "'Lora', serif",
-                        fontWeight: 600,
-                        color: "#14532d",
-                        fontSize: "0.9rem",
-                        marginBottom: "1rem",
-                      }}
-                    >
-                      Jam Operasional
-                    </h3>
-                    <InfoRow
-                      label="Jam Layanan"
-                      value={p.jam_layanan}
-                      icon={Clock}
-                    />
-                    <InfoRow
-                      label="Jam Istirahat"
-                      value={p.jam_istirahat}
-                      icon={Clock}
-                    />
-                  </div>
-
-                  {/* Social */}
-                  <div
-                    style={{
-                      marginTop: "1.25rem",
-                      display: "flex",
-                      gap: "0.75rem",
-                    }}
-                  >
-                    {[
-                      {
-                        Icon: FacebookIcon,
-                        href: p.facebook,
-                        label: "Facebook",
-                      },
-                      {
-                        Icon: InstagramIcon,
-                        href: p.instagram,
-                        label: "Instagram",
-                      },
-                      { Icon: YoutubeIcon, href: p.youtube, label: "YouTube" },
-                    ]
-                      .filter(({ href }) => href)
-                      .map(({ Icon, href, label }) => (
-                        <a
-                          key={label}
-                          href={href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.5rem",
-                            padding: "0.5rem 0.875rem",
-                            background: "#f0fdf4",
-                            borderRadius: "9999px",
-                            color: "#16a34a",
-                            textDecoration: "none",
-                            fontFamily: "'Plus Jakarta Sans', sans-serif",
-                            fontSize: "0.78rem",
-                            fontWeight: 500,
-                            border: "1px solid #dcfce7",
-                            transition: "all 0.2s",
-                          }}
-                          onMouseOver={(e) => {
-                            e.currentTarget.style.background = "#15803d";
-                            e.currentTarget.style.color = "white";
-                          }}
-                          onMouseOut={(e) => {
-                            e.currentTarget.style.background = "#f0fdf4";
-                            e.currentTarget.style.color = "#16a34a";
-                          }}
-                        >
-                          <Icon size={14} /> {label}
-                        </a>
-                      ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ── Statistik ── */}
-            {activeTab === "statistik" && (
-              <div>
-                <h2
-                  style={{
-                    fontFamily: "'Lora', serif",
-                    fontWeight: 700,
-                    color: "#14532d",
-                    fontSize: "1.25rem",
-                    marginBottom: "1.75rem",
-                  }}
-                >
-                  Data Kependudukan & Wilayah
-                </h2>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
-                    gap: "1.25rem",
-                  }}
-                  className="stats-grid2"
-                >
-                  <StatBox
-                    label="Total Penduduk"
-                    value={p.jumlah_penduduk}
-                    unit="jiwa"
-                    icon={Users}
-                  />
-                  <StatBox
-                    label="Jumlah KK"
-                    value={p.jumlah_kk}
-                    unit="KK"
-                    icon={Building2}
-                  />
-                  <StatBox
-                    label="Luas Wilayah"
-                    value={p.luas_wilayah}
-                    unit="Ha"
-                    icon={Map}
-                  />
-                  <StatBox
-                    label="Jumlah Dusun"
-                    value={p.jumlah_dusun}
-                    unit="dusun"
-                    icon={MapPin}
-                  />
-                  <StatBox
-                    label="Jumlah RW"
-                    value={p.jumlah_rw}
-                    unit="RW"
-                    icon={MapPin}
-                  />
-                  <StatBox
-                    label="Jenis Layanan"
-                    value={12}
-                    unit="layanan"
-                    icon={ChevronRight}
-                  />
-                </div>
-                <style>{`
-                  @media (max-width: 640px) { .stats-grid2 { grid-template-columns: repeat(2, 1fr) !important; } }
-                `}</style>
-              </div>
-            )}
-
-            {/* ── Visi Misi ── */}
-            {activeTab === "visi-misi" && (
-              <div style={{ display: "grid", gap: "1.5rem" }}>
-                <div
-                  style={{
-                    background: "white",
-                    borderRadius: "20px",
-                    padding: "2rem",
-                    border: "1px solid #dcfce7",
-                    borderLeft: "4px solid #16a34a",
-                    boxShadow: "0 2px 12px rgba(22,163,74,0.06)",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.625rem",
-                      marginBottom: "1.25rem",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "2.25rem",
-                        height: "2.25rem",
-                        background: "linear-gradient(135deg, #dcfce7, #bbf7d0)",
-                        borderRadius: "10px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Target size={16} color="#16a34a" />
-                    </div>
-                    <h2
-                      style={{
-                        fontFamily: "'Lora', serif",
-                        fontWeight: 700,
-                        color: "#14532d",
-                        fontSize: "1.2rem",
-                      }}
-                    >
-                      Visi
-                    </h2>
-                  </div>
-                  <blockquote
-                    style={{
-                      fontFamily: "'Lora', serif",
-                      fontSize: "1rem",
-                      color: "#1f2937",
-                      lineHeight: 1.8,
-                      fontStyle: "italic",
-                      borderLeft: "none",
-                      margin: 0,
-                      padding: 0,
-                    }}
-                  >
-                    "{p.visi}"
-                  </blockquote>
-                </div>
-
-                <div
-                  style={{
-                    background: "white",
-                    borderRadius: "20px",
-                    padding: "2rem",
-                    border: "1px solid #dcfce7",
-                    borderLeft: "4px solid #22c55e",
-                    boxShadow: "0 2px 12px rgba(22,163,74,0.06)",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.625rem",
-                      marginBottom: "1.25rem",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "2.25rem",
-                        height: "2.25rem",
-                        background: "linear-gradient(135deg, #dcfce7, #bbf7d0)",
-                        borderRadius: "10px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Leaf size={16} color="#16a34a" />
-                    </div>
-                    <h2
-                      style={{
-                        fontFamily: "'Lora', serif",
-                        fontWeight: 700,
-                        color: "#14532d",
-                        fontSize: "1.2rem",
-                      }}
-                    >
-                      Misi
-                    </h2>
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "0.875rem",
-                    }}
-                  >
-                    {p.misi.split("\n").map((line, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          display: "flex",
-                          gap: "0.75rem",
-                          alignItems: "flex-start",
-                          fontFamily: "'Plus Jakarta Sans', sans-serif",
-                          fontSize: "0.875rem",
-                          color: "#374151",
-                          lineHeight: 1.7,
-                        }}
-                      >
-                        <span
-                          style={{
-                            width: "1.5rem",
-                            height: "1.5rem",
-                            background:
-                              "linear-gradient(135deg, #15803d, #16a34a)",
-                            borderRadius: "50%",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0,
-                            fontSize: "0.65rem",
-                            color: "white",
-                            fontWeight: 700,
-                            marginTop: "1px",
-                          }}
-                        >
-                          {i + 1}
-                        </span>
-                        {line.replace(/^\d+\.\s*/, "")}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ── Sejarah ── */}
-            {activeTab === "sejarah" && (
-              <div
-                style={{
-                  background: "white",
-                  borderRadius: "20px",
-                  padding: "2.5rem",
-                  border: "1px solid #dcfce7",
-                  boxShadow: "0 2px 12px rgba(22,163,74,0.06)",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.75rem",
-                    marginBottom: "1.5rem",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "2.5rem",
-                      height: "2.5rem",
-                      background: "linear-gradient(135deg, #dcfce7, #bbf7d0)",
-                      borderRadius: "12px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <BookOpen size={18} color="#16a34a" />
-                  </div>
-                  <h2
-                    style={{
-                      fontFamily: "'Lora', serif",
-                      fontWeight: 700,
-                      color: "#14532d",
-                      fontSize: "1.25rem",
-                    }}
-                  >
-                    Sejarah {p.nama_desa}
-                  </h2>
-                </div>
-
-                <div
-                  style={{
-                    borderLeft: "3px solid #bbf7d0",
-                    paddingLeft: "1.5rem",
-                    marginLeft: "0.5rem",
-                  }}
-                >
-                  {p.sejarah
-                    .split("\n")
-                    .filter(Boolean)
-                    .map((para, i) => (
-                      <p
-                        key={i}
-                        style={{
-                          fontFamily: "'Lora', serif",
-                          fontSize: "0.95rem",
-                          color: "#374151",
-                          lineHeight: 1.9,
-                          marginBottom: "1rem",
-                        }}
-                      >
-                        {para}
-                      </p>
-                    ))}
-                </div>
-              </div>
-            )}
-
-            {/* ── Lokasi ── */}
-            {activeTab === "lokasi" && (
-              <div style={{ display: "grid", gap: "1.5rem" }}>
-                <div
-                  style={{
-                    background: "white",
-                    borderRadius: "20px",
-                    padding: "1.75rem",
-                    border: "1px solid #dcfce7",
-                    boxShadow: "0 2px 12px rgba(22,163,74,0.06)",
-                  }}
-                >
-                  <h2
-                    style={{
-                      fontFamily: "'Lora', serif",
-                      fontWeight: 700,
-                      color: "#14532d",
-                      fontSize: "1.1rem",
-                      marginBottom: "1rem",
-                    }}
-                  >
-                    Alamat Kantor
-                  </h2>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "0.75rem",
-                      alignItems: "flex-start",
-                      fontFamily: "'Plus Jakarta Sans', sans-serif",
-                      fontSize: "0.875rem",
-                      color: "#374151",
-                    }}
-                  >
-                    <MapPin
-                      size={18}
-                      color="#16a34a"
-                      style={{ flexShrink: 0, marginTop: 2 }}
-                    />
-                    <div>
-                      <div style={{ fontWeight: 600, marginBottom: "0.25rem" }}>
-                        {p.nama_desa}
-                      </div>
-                      <div style={{ color: "#6b7280", lineHeight: 1.6 }}>
-                        {p.alamat}
-                      </div>
-                      <div style={{ color: "#6b7280" }}>
-                        {p.kecamatan}, {p.kabupaten}
-                      </div>
-                      <div style={{ color: "#6b7280" }}>
-                        {p.provinsi} {p.kode_pos}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Maps embed placeholder */}
-                <div
-                  style={{
-                    background: "#f0fdf4",
-                    borderRadius: "20px",
-                    border: "2px dashed #86efac",
-                    height: "360px",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "0.875rem",
-                    color: "#16a34a",
-                  }}
-                >
-                  <Map size={40} style={{ opacity: 0.4 }} />
-                  <div
-                    style={{
-                      fontFamily: "'Plus Jakarta Sans', sans-serif",
-                      fontSize: "0.875rem",
-                      color: "#4b5563",
-                      textAlign: "center",
-                    }}
-                  >
-                    <p
-                      style={{
-                        fontWeight: 600,
-                        color: "#15803d",
-                        marginBottom: "0.25rem",
-                      }}
-                    >
-                      Peta Google Maps
-                    </p>
-                    <p style={{ fontSize: "0.8rem" }}>
-                      Embed peta akan ditampilkan di sini
-                    </p>
-                    <p
-                      style={{
-                        fontSize: "0.75rem",
-                        color: "#9ca3af",
-                        marginTop: "0.5rem",
-                      }}
-                    >
-                      Konfigurasikan Maps Embed di halaman admin → Profil Desa
-                    </p>
-                  </div>
-                  <a
-                    href={`https://maps.google.com/?q=${encodeURIComponent(p.alamat)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "0.375rem",
-                      padding: "0.5rem 1rem",
-                      background: "#16a34a",
-                      color: "white",
-                      borderRadius: "9999px",
-                      fontFamily: "'Plus Jakarta Sans', sans-serif",
-                      fontSize: "0.78rem",
-                      fontWeight: 600,
-                      textDecoration: "none",
-                    }}
-                  >
-                    <MapPin size={12} /> Buka di Google Maps
-                  </a>
-                </div>
-              </div>
-            )}
-          </div>
+        <div className="absolute bottom-0 left-0 right-0">
+          <svg viewBox="0 0 1440 60" className="w-full fill-gray-50">
+            <path d="M0,30 C360,0 1080,60 1440,30 L1440,60 L0,60 Z" />
+          </svg>
         </div>
-        <style>{`
-          @media (max-width: 768px) { .profil-grid { grid-template-columns: 1fr !important; } }
-        `}</style>
       </section>
+
+      {/* stat cards */}
+      <div className="max-w-5xl mx-auto px-4 -mt-8 relative z-10">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {infoCards.map((c, i) => (
+            <Section key={c.key} delay={i * 80}>
+              <div className="bg-white rounded-2xl shadow-lg shadow-green-100/40 p-5 text-center border border-green-50 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <c.icon className="w-5 h-5 text-green-600" />
+                </div>
+                <p className="text-xl font-extrabold text-green-700 mb-0.5">
+                  {profil[c.key]}
+                  {c.suffix}
+                </p>
+                <p className="text-xs text-gray-500">{c.label}</p>
+              </div>
+            </Section>
+          ))}
+        </div>
+      </div>
+
+      {/* main content */}
+      <div className="max-w-5xl mx-auto px-4 py-16 space-y-12">
+        {/* tabs */}
+        <Section>
+          <div className="bg-white rounded-3xl shadow-sm border border-green-100 overflow-hidden">
+            {/* tab bar */}
+            <div className="flex border-b border-gray-100 overflow-x-auto">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-1 min-w-max py-4 px-6 text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? "text-green-700 border-b-2 border-green-600 bg-green-50"
+                      : "text-gray-500 hover:text-green-600 hover:bg-green-50/50"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* tab content */}
+            <div className="p-8">
+              {activeTab === "sejarah" && (
+                <div className="prose prose-green max-w-none">
+                  <p className="text-gray-600 leading-relaxed text-sm whitespace-pre-line">
+                    {profil.sejarah || "Informasi sejarah belum tersedia."}
+                  </p>
+                </div>
+              )}
+
+              {activeTab === "visi-misi" && (
+                <div className="grid md:grid-cols-2 gap-8">
+                  <div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <span className="text-green-700 font-bold text-sm">
+                          V
+                        </span>
+                      </div>
+                      <h3 className="font-bold text-gray-900">Visi</h3>
+                    </div>
+                    <div className="bg-green-50 border border-green-100 rounded-2xl p-5">
+                      <p className="text-gray-700 text-sm leading-relaxed italic">
+                        "{profil.visi}"
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                        <span className="text-emerald-700 font-bold text-sm">
+                          M
+                        </span>
+                      </div>
+                      <h3 className="font-bold text-gray-900">Misi</h3>
+                    </div>
+                    <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5">
+                      <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line">
+                        {profil.misi}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "kontak" && (
+                <div className="grid sm:grid-cols-2 gap-5">
+                  {[
+                    {
+                      icon: MapPin,
+                      label: "Alamat",
+                      value: `${profil.nama_desa}, ${profil.kecamatan}, ${profil.kabupaten}, ${profil.provinsi} ${profil.kode_pos}`,
+                    },
+                    { icon: Phone, label: "Telepon", value: profil.telepon },
+                    { icon: Mail, label: "Email", value: profil.email },
+                    { icon: Globe, label: "Website", value: profil.website },
+                    {
+                      icon: Clock,
+                      label: "Jam Pelayanan",
+                      value: "Senin – Jumat, 08.00 – 16.00 WIB",
+                    },
+                  ].map(({ icon: Icon, label, value }) => (
+                    <div
+                      key={label}
+                      className="flex items-start gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-100"
+                    >
+                      <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center shrink-0">
+                        <Icon className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400 mb-0.5">{label}</p>
+                        <p className="text-sm font-semibold text-gray-800">
+                          {value}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </Section>
+
+        {/* Google Maps embed */}
+        <Section delay={200}>
+          <div className="bg-white rounded-3xl shadow-sm border border-green-100 overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
+              <MapPin className="w-5 h-5 text-green-600" />
+              <h3 className="font-bold text-gray-900">Lokasi Desa</h3>
+            </div>
+            <div
+              className="relative bg-gray-100"
+              style={{ paddingBottom: "56.25%" }}
+            >
+              {profil.embed_maps ? (
+                <iframe
+                  src={profil.embed_maps}
+                  className="absolute inset-0 w-full h-full"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="Lokasi Desa Sukamaju"
+                />
+              ) : (
+                <iframe
+                  src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d126748!2d107.6191!3d-6.9175!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sid!2sid!4v1700000000000!5m2!1sid!2sid"
+                  className="absolute inset-0 w-full h-full"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="Lokasi Desa"
+                />
+              )}
+            </div>
+          </div>
+        </Section>
+      </div>
     </div>
   );
-};
-
-export default ProfilDesaPage;
+}

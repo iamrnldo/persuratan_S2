@@ -4,27 +4,30 @@ import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/admin/ProtectedRoute";
 import AdminLayout from "./layouts/AdminLayout";
-import PublicLayout from "./layouts/PublicLayout"; // ← NEW
+import PublicLayout from "./layouts/PublicLayout";
 import { ROLES } from "./utils/constants";
 
-// Admin Pages
+// ── Admin Pages ──
 import LoginPage from "./pages/admin/Login";
 import DashboardPage from "./pages/admin/Dashboard";
-import FAQPage from "./pages/admin/FAQ";
-import LayananPage from "./pages/admin/Layanan";
+import FAQAdminPage from "./pages/admin/FAQ";
+import LayananAdminPage from "./pages/admin/Layanan";
 import GaleriKategoriPage from "./pages/admin/GaleriKategori";
-import ProfilDesaPage from "./pages/admin/ProfilDesa";
+import ProfilDesaAdminPage from "./pages/admin/ProfilDesa";
 import KlasifikasiSuratPage from "./pages/admin/KlasifikasiSurat";
 import SuratPage from "./pages/admin/Surat";
 import SuratDetail from "./pages/admin/Surat/SuratDetail";
-import StrukturOrganisasiPage from "./pages/admin/StrukturOrganisasi";
+import StrukturOrganisasiAdminPage from "./pages/admin/StrukturOrganisasi";
 import ManageAdminPage from "./pages/admin/ManageAdmin";
 
-// Public Pages ← NEW
+// ── Public Pages ──
 import HomePage from "./pages/public/Home";
-import KontakPage from "./pages/public/Kontak";
 import LayananPublicPage from "./pages/public/Layanan";
+import FAQPublicPage from "./pages/public/FAQ";
 import ProfilDesaPublicPage from "./pages/public/ProfilDesa";
+import StrukturOrganisasiPublicPage from "./pages/public/StrukturOrganisasi";
+import PreviewDownloadSurat from "./pages/public/Preview_DownloadSurat";
+import ContactUs from "./pages/public/ContactUs";
 
 const App = () => {
   return (
@@ -34,38 +37,33 @@ const App = () => {
           position="top-right"
           toastOptions={{
             duration: 3000,
-            style: {
-              background: "#1f2937",
-              color: "#f9fafb",
-            },
+            style: { background: "#1f2937", color: "#f9fafb" },
             success: {
-              iconTheme: {
-                primary: "#10b981",
-                secondary: "#f9fafb",
-              },
+              iconTheme: { primary: "#10b981", secondary: "#f9fafb" },
             },
-            error: {
-              iconTheme: {
-                primary: "#ef4444",
-                secondary: "#f9fafb",
-              },
-            },
+            error: { iconTheme: { primary: "#ef4444", secondary: "#f9fafb" } },
           }}
         />
 
         <Routes>
-          {/* ── Public Routes ── */}
+          {/* ══ Public Routes ══ */}
           <Route element={<PublicLayout />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/profil-desa" element={<ProfilDesaPublicPage />} />
             <Route path="/layanan" element={<LayananPublicPage />} />
-            <Route path="/kontak" element={<KontakPage />} />
+            <Route path="/faq" element={<FAQPublicPage />} />
+            <Route
+              path="/struktur-organisasi"
+              element={<StrukturOrganisasiPublicPage />}
+            />
+            <Route path="/cek-surat" element={<PreviewDownloadSurat />} />
+            <Route path="/kontak" element={<ContactUs />} />
           </Route>
 
-          {/* Admin Login - Public */}
+          {/* ══ Admin Login ══ */}
           <Route path="/admin/login" element={<LoginPage />} />
 
-          {/* Admin Routes - Protected */}
+          {/* ══ Admin Routes (Protected) ══ */}
           <Route
             path="/admin"
             element={
@@ -76,10 +74,10 @@ const App = () => {
           >
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="faq" element={<FAQPage />} />
-            <Route path="layanan" element={<LayananPage />} />
+            <Route path="faq" element={<FAQAdminPage />} />
+            <Route path="layanan" element={<LayananAdminPage />} />
             <Route path="galeri-kategori" element={<GaleriKategoriPage />} />
-            <Route path="profil-desa" element={<ProfilDesaPage />} />
+            <Route path="profil-desa" element={<ProfilDesaAdminPage />} />
             <Route
               path="klasifikasi-surat"
               element={<KlasifikasiSuratPage />}
@@ -88,7 +86,7 @@ const App = () => {
             <Route path="surat/:id" element={<SuratDetail />} />
             <Route
               path="struktur-organisasi"
-              element={<StrukturOrganisasiPage />}
+              element={<StrukturOrganisasiAdminPage />}
             />
             <Route
               path="manage-admin"
@@ -100,7 +98,7 @@ const App = () => {
             />
           </Route>
 
-          {/* 404 */}
+          {/* ══ 404 fallback ══ */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

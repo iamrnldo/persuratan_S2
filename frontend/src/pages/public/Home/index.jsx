@@ -1,593 +1,383 @@
-/* eslint-disable no-unused-vars */
-// frontend/src/pages/public/Home/index.jsx
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
   FileText,
   Users,
-  MapPin,
-  Phone,
+  Shield,
+  Clock,
+  CheckCircle,
   Star,
   ChevronRight,
-  Building2,
-  Clock,
-  CheckCircle2,
-  Leaf,
-  Shield,
+  Sparkles,
+  TrendingUp,
+  Award,
   Zap,
-  Heart,
 } from "lucide-react";
 
-// ── Animasi counter ──
-const useCounter = (target, duration = 1500, start = false) => {
-  const [count, setCount] = useState(0);
+/* ── hook: intersection observer ── */
+function useInView(options = {}) {
+  const ref = useRef(null);
+  const [inView, setInView] = useState(false);
   useEffect(() => {
-    if (!start || !target) return;
-    let startTime = null;
-    const step = (timestamp) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      const ease = 1 - Math.pow(1 - progress, 3);
-      setCount(Math.floor(ease * target));
-      if (progress < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  }, [target, start, duration]);
-  return count;
-};
-
-// ── Counter Card ──
-const StatCard = ({
-  value,
-  suffix = "",
-  label,
-  icon: Icon,
-  delay = 0,
-  started,
-}) => {
-  const count = useCounter(value, 1400, started);
-  return (
-    <div
-      style={{
-        textAlign: "center",
-        padding: "1.5rem",
-        animation: `fadeUp 0.6s ease ${delay}ms both`,
-      }}
-    >
-      <div
-        style={{
-          width: "3rem",
-          height: "3rem",
-          background: "rgba(255,255,255,0.15)",
-          borderRadius: "12px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          margin: "0 auto 0.75rem",
-        }}
-      >
-        <Icon size={22} color="white" />
-      </div>
-      <div
-        style={{
-          fontSize: "2.25rem",
-          fontWeight: 700,
-          color: "white",
-          lineHeight: 1,
-          fontFamily: "'Lora', serif",
-        }}
-      >
-        {count.toLocaleString("id-ID")}
-        {suffix}
-      </div>
-      <div
-        style={{
-          fontSize: "0.8rem",
-          color: "#bbf7d0",
-          marginTop: "0.375rem",
-          fontFamily: "'Plus Jakarta Sans', sans-serif",
-        }}
-      >
-        {label}
-      </div>
-    </div>
-  );
-};
-
-// ── Service Card ──
-const ServiceCard = ({ icon, title, desc, delay }) => (
-  <div
-    style={{
-      background: "white",
-      borderRadius: "16px",
-      padding: "1.75rem",
-      border: "1px solid #dcfce7",
-      transition: "all 0.3s ease",
-      cursor: "default",
-      animation: `fadeUp 0.6s ease ${delay}ms both`,
-      boxShadow: "0 2px 12px rgba(22,163,74,0.06)",
-    }}
-    onMouseOver={(e) => {
-      e.currentTarget.style.transform = "translateY(-4px)";
-      e.currentTarget.style.boxShadow = "0 12px 32px rgba(22,163,74,0.15)";
-      e.currentTarget.style.borderColor = "#86efac";
-    }}
-    onMouseOut={(e) => {
-      e.currentTarget.style.transform = "translateY(0)";
-      e.currentTarget.style.boxShadow = "0 2px 12px rgba(22,163,74,0.06)";
-      e.currentTarget.style.borderColor = "#dcfce7";
-    }}
-  >
-    <div
-      style={{
-        width: "3rem",
-        height: "3rem",
-        background: "linear-gradient(135deg, #dcfce7, #bbf7d0)",
-        borderRadius: "12px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        marginBottom: "1rem",
-      }}
-    >
-      {icon}
-    </div>
-    <h3
-      style={{
-        fontFamily: "'Lora', serif",
-        fontWeight: 600,
-        fontSize: "1rem",
-        color: "#14532d",
-        marginBottom: "0.5rem",
-      }}
-    >
-      {title}
-    </h3>
-    <p
-      style={{
-        fontFamily: "'Plus Jakarta Sans', sans-serif",
-        fontSize: "0.825rem",
-        color: "#4b5563",
-        lineHeight: 1.7,
-      }}
-    >
-      {desc}
-    </p>
-  </div>
-);
-
-// ── Main ──
-const HomePage = () => {
-  const statsRef = useRef(null);
-  const [statsStarted, setStatsStarted] = useState(false);
-
-  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
     const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) setStatsStarted(true);
-      },
-      { threshold: 0.3 },
+      ([entry]) => entry.isIntersecting && setInView(true),
+      { threshold: 0.15, ...options },
     );
-    if (statsRef.current) obs.observe(statsRef.current);
+    obs.observe(el);
     return () => obs.disconnect();
   }, []);
+  return [ref, inView];
+}
 
-  const services = [
-    {
-      icon: <FileText size={22} color="#16a34a" />,
-      title: "Surat Pengantar",
-      desc: "Layanan pembuatan surat pengantar untuk berbagai keperluan administratif warga desa.",
-    },
-    {
-      icon: <Shield size={22} color="#16a34a" />,
-      title: "Surat Keterangan",
-      desc: "Penerbitan surat keterangan domisili, usaha, tidak mampu, dan berbagai keterangan lainnya.",
-    },
-    {
-      icon: <Users size={22} color="#16a34a" />,
-      title: "Layanan Kependudukan",
-      desc: "Administrasi data kependudukan, KTP, KK, dan dokumen kependudukan lainnya.",
-    },
-    {
-      icon: <Zap size={22} color="#16a34a" />,
-      title: "Perizinan Cepat",
-      desc: "Proses perizinan usaha mikro dan izin kegiatan masyarakat yang cepat dan transparan.",
-    },
-    {
-      icon: <Heart size={22} color="#16a34a" />,
-      title: "Bantuan Sosial",
-      desc: "Administrasi dan verifikasi data penerima bantuan sosial dari berbagai program pemerintah.",
-    },
-    {
-      icon: <Building2 size={22} color="#16a34a" />,
-      title: "Aset & Infrastruktur",
-      desc: "Pengelolaan dokumen aset desa dan laporan infrastruktur untuk kepentingan warga.",
-    },
-  ];
+/* ── counter animation ── */
+function Counter({ target, suffix = "", duration = 2000 }) {
+  const [count, setCount] = useState(0);
+  const [ref, inView] = useInView();
+  useEffect(() => {
+    if (!inView) return;
+    let start = 0;
+    const step = target / (duration / 16);
+    const timer = setInterval(() => {
+      start += step;
+      if (start >= target) {
+        setCount(target);
+        clearInterval(timer);
+      } else setCount(Math.floor(start));
+    }, 16);
+    return () => clearInterval(timer);
+  }, [inView, target, duration]);
+  return (
+    <span ref={ref}>
+      {count.toLocaleString("id-ID")}
+      {suffix}
+    </span>
+  );
+}
 
-  const steps = [
-    {
-      num: "01",
-      title: "Datang ke Kantor",
-      desc: "Kunjungi kantor desa pada jam layanan yang tersedia.",
-    },
-    {
-      num: "02",
-      title: "Isi Formulir",
-      desc: "Lengkapi formulir sesuai jenis layanan yang dibutuhkan.",
-    },
-    {
-      num: "03",
-      title: "Proses Dokumen",
-      desc: "Petugas memproses dokumen Anda secara cepat dan tepat.",
-    },
-    {
-      num: "04",
-      title: "Terima Dokumen",
-      desc: "Dokumen selesai dan siap diambil atau dikirim.",
-    },
-  ];
+const stats = [
+  { icon: FileText, label: "Surat Diproses", value: 1240, suffix: "+" },
+  { icon: Users, label: "Warga Terlayani", value: 3500, suffix: "+" },
+  { icon: Clock, label: "Rata-rata Proses", value: 24, suffix: " Jam" },
+  { icon: Award, label: "Kepuasan Warga", value: 98, suffix: "%" },
+];
+
+const services = [
+  {
+    title: "Surat Keterangan Domisili",
+    desc: "Dokumen resmi keterangan tempat tinggal warga yang diakui pemerintah.",
+    icon: "🏠",
+    color: "from-green-400 to-green-600",
+  },
+  {
+    title: "Surat Keterangan Usaha",
+    desc: "Legalitas usaha mikro dan kecil untuk keperluan administrasi bisnis.",
+    icon: "💼",
+    color: "from-emerald-400 to-emerald-600",
+  },
+  {
+    title: "Surat Pengantar KTP",
+    desc: "Surat pengantar pembuatan atau perpanjangan Kartu Tanda Penduduk.",
+    icon: "🪪",
+    color: "from-teal-400 to-teal-600",
+  },
+  {
+    title: "Surat Keterangan Tidak Mampu",
+    desc: "Dokumen resmi keterangan kondisi ekonomi untuk berbagai bantuan.",
+    icon: "📋",
+    color: "from-green-500 to-emerald-700",
+  },
+];
+
+const steps = [
+  {
+    step: "01",
+    title: "Ajukan Permohonan",
+    desc: "Kunjungi kantor desa atau hubungi petugas untuk mengajukan permohonan surat.",
+  },
+  {
+    step: "02",
+    title: "Verifikasi Data",
+    desc: "Petugas memverifikasi kelengkapan data dan dokumen pendukung Anda.",
+  },
+  {
+    step: "03",
+    title: "Proses Surat",
+    desc: "Surat diproses oleh perangkat desa dalam waktu 1×24 jam kerja.",
+  },
+  {
+    step: "04",
+    title: "Ambil / Download",
+    desc: "Surat siap diambil atau diunduh secara digital sesuai kebutuhan.",
+  },
+];
+
+const testimonials = [
+  {
+    name: "Budi Santoso",
+    role: "Warga RT 03",
+    text: "Prosesnya sangat cepat dan mudah. Tidak perlu antri lama, surat langsung jadi dalam sehari!",
+    rating: 5,
+  },
+  {
+    name: "Siti Aminah",
+    role: "Pelaku UMKM",
+    text: "Surat keterangan usaha bisa saya urus dengan mudah. Pelayanannya ramah dan profesional.",
+    rating: 5,
+  },
+  {
+    name: "Andi Pratama",
+    role: "Warga RW 02",
+    text: "Sistem digitalnya memudahkan sekali. Bisa cek status surat dari rumah tanpa harus datang.",
+    rating: 5,
+  },
+];
+
+function FadeIn({ children, delay = 0, className = "" }) {
+  const [ref, inView] = useInView();
+  return (
+    <div
+      ref={ref}
+      className={`transition-all duration-700 ${
+        inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+      } ${className}`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      {children}
+    </div>
+  );
+}
+
+export default function HomePage() {
+  const [heroVisible, setHeroVisible] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setHeroVisible(true), 100);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
-    <div>
-      <style>{`
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(24px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-        @keyframes shimmer {
-          0% { background-position: -200% center; }
-          100% { background-position: 200% center; }
-        }
-        .hero-badge {
-          display: inline-flex; align-items: center; gap: 0.375rem;
-          background: rgba(255,255,255,0.15);
-          border: 1px solid rgba(255,255,255,0.25);
-          padding: 0.375rem 0.875rem;
-          border-radius: 9999px;
-          font-family: 'Plus Jakarta Sans', sans-serif;
-          font-size: 0.75rem; font-weight: 500; color: white;
-          margin-bottom: 1.5rem;
-          backdrop-filter: blur(8px);
-          animation: fadeUp 0.6s ease both;
-        }
-        .hero-float {
-          animation: float 4s ease-in-out infinite;
-        }
-        .step-line::after {
-          content: '';
-          position: absolute;
-          top: 1.25rem; left: calc(50% + 1.75rem);
-          width: calc(100% - 3.5rem);
-          height: 2px;
-          background: linear-gradient(to right, #bbf7d0, transparent);
-        }
-      `}</style>
-
-      {/* ── Hero ── */}
-      <section
-        style={{
-          minHeight: "calc(100vh - 4rem)",
-          background:
-            "linear-gradient(135deg, #052e16 0%, #14532d 35%, #15803d 65%, #16a34a 100%)",
-          position: "relative",
-          display: "flex",
-          alignItems: "center",
-          overflow: "hidden",
-        }}
-      >
-        {/* Decorative circles */}
-        <div
-          style={{
-            position: "absolute",
-            top: "-10%",
-            right: "-5%",
-            width: "500px",
-            height: "500px",
-            background:
-              "radial-gradient(circle, rgba(74,222,128,0.15) 0%, transparent 70%)",
-            borderRadius: "50%",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            bottom: "-15%",
-            left: "-10%",
-            width: "600px",
-            height: "600px",
-            background:
-              "radial-gradient(circle, rgba(34,197,94,0.1) 0%, transparent 70%)",
-            borderRadius: "50%",
-          }}
-        />
-        {/* Grid overlay */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
-            backgroundSize: "48px 48px",
-          }}
-        />
-
-        <div
-          style={{
-            maxWidth: "1200px",
-            margin: "0 auto",
-            padding: "5rem 1.5rem",
-            position: "relative",
-            zIndex: 1,
-            width: "100%",
-          }}
-        >
+    <div className="overflow-hidden">
+      {/* ══════════════════════════════════
+          HERO
+      ══════════════════════════════════ */}
+      <section className="relative min-h-[92vh] flex items-center bg-gradient-to-br from-green-50 via-white to-emerald-50 overflow-hidden">
+        {/* bg decor */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-green-200/30 rounded-full blur-3xl animate-pulse" />
           <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "4rem",
-              alignItems: "center",
-            }}
-            className="hero-grid"
-          >
-            {/* Left */}
-            <div>
-              <div className="hero-badge">
-                <Leaf size={12} />
-                Pelayanan Publik Digital
+            className="absolute -bottom-40 -left-40 w-96 h-96 bg-emerald-200/20 rounded-full blur-3xl animate-pulse"
+            style={{ animationDelay: "1s" }}
+          />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-green-100/20 rounded-full blur-3xl" />
+          {/* floating dots */}
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-2 h-2 bg-green-300/50 rounded-full animate-bounce"
+              style={{
+                left: `${15 + i * 15}%`,
+                top: `${20 + (i % 3) * 25}%`,
+                animationDelay: `${i * 0.3}s`,
+                animationDuration: `${2 + i * 0.2}s`,
+              }}
+            />
+          ))}
+        </div>
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            {/* left */}
+            <div
+              className={`transition-all duration-1000 ${
+                heroVisible
+                  ? "opacity-100 translate-x-0"
+                  : "opacity-0 -translate-x-12"
+              }`}
+            >
+              {/* badge */}
+              <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-1.5 rounded-full text-sm font-medium mb-6 border border-green-200">
+                <Sparkles className="w-3.5 h-3.5" />
+                Pelayanan Digital Terpadu
               </div>
-              <h1
-                style={{
-                  fontFamily: "'Lora', serif",
-                  fontSize: "clamp(2rem, 4vw, 3.25rem)",
-                  fontWeight: 700,
-                  color: "white",
-                  lineHeight: 1.2,
-                  marginBottom: "1.25rem",
-                  animation: "fadeUp 0.6s ease 0.1s both",
-                }}
-              >
-                Layanan Desa
-                <br />
-                <span
-                  style={{
-                    background: "linear-gradient(135deg, #4ade80, #86efac)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                  }}
-                >
-                  Cepat & Transparan
-                </span>
+
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight mb-6">
+                Layanan Surat{" "}
+                <span className="relative">
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-emerald-500">
+                    Desa Mudah
+                  </span>
+                  <svg
+                    className="absolute -bottom-2 left-0 w-full"
+                    viewBox="0 0 200 8"
+                    fill="none"
+                  >
+                    <path
+                      d="M0 4 Q100 8 200 4"
+                      stroke="url(#ug)"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      fill="none"
+                    />
+                    <defs>
+                      <linearGradient
+                        id="ug"
+                        x1="0"
+                        y1="0"
+                        x2="200"
+                        y2="0"
+                        gradientUnits="userSpaceOnUse"
+                      >
+                        <stop stopColor="#16a34a" />
+                        <stop offset="1" stopColor="#10b981" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </span>{" "}
+                & Cepat
               </h1>
-              <p
-                style={{
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
-                  fontSize: "1rem",
-                  color: "#bbf7d0",
-                  lineHeight: 1.8,
-                  marginBottom: "2rem",
-                  animation: "fadeUp 0.6s ease 0.2s both",
-                  maxWidth: "420px",
-                }}
-              >
-                Sistem persuratan digital Desa Maju hadir untuk memudahkan warga
-                dalam mengurus administrasi dan layanan desa secara efisien.
+
+              <p className="text-gray-600 text-lg leading-relaxed mb-8 max-w-lg">
+                Urus berbagai keperluan administrasi surat menyurat Desa
+                Sukamaju secara mudah, transparan, dan dapat diakses kapan saja.
               </p>
-              <div
-                style={{
-                  display: "flex",
-                  gap: "0.875rem",
-                  flexWrap: "wrap",
-                  animation: "fadeUp 0.6s ease 0.3s both",
-                }}
-              >
+
+              <div className="flex flex-wrap gap-4">
                 <Link
                   to="/layanan"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    padding: "0.875rem 1.75rem",
-                    background: "white",
-                    color: "#15803d",
-                    borderRadius: "9999px",
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                    fontWeight: 700,
-                    fontSize: "0.9rem",
-                    textDecoration: "none",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow =
-                      "0 8px 28px rgba(0,0,0,0.25)";
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow =
-                      "0 4px 20px rgba(0,0,0,0.2)";
-                  }}
+                  className="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3.5 rounded-xl font-semibold hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg hover:shadow-green-300/50 hover:-translate-y-1 transform text-sm"
                 >
-                  Lihat Layanan <ArrowRight size={16} />
+                  Lihat Layanan
+                  <ArrowRight className="w-4 h-4" />
                 </Link>
                 <Link
-                  to="/kontak"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    padding: "0.875rem 1.75rem",
-                    background: "rgba(255,255,255,0.1)",
-                    border: "1px solid rgba(255,255,255,0.25)",
-                    color: "white",
-                    borderRadius: "9999px",
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                    fontWeight: 600,
-                    fontSize: "0.9rem",
-                    textDecoration: "none",
-                    backdropFilter: "blur(8px)",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.background = "rgba(255,255,255,0.18)";
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.background = "rgba(255,255,255,0.1)";
-                  }}
+                  to="/cek-surat"
+                  className="inline-flex items-center gap-2 border-2 border-green-600 text-green-700 px-6 py-3.5 rounded-xl font-semibold hover:bg-green-50 transition-all duration-200 hover:-translate-y-1 transform text-sm"
                 >
-                  Hubungi Kami
+                  <FileText className="w-4 h-4" />
+                  Cek Surat Saya
                 </Link>
               </div>
 
-              {/* Trust badges */}
-              <div
-                style={{
-                  display: "flex",
-                  gap: "1.5rem",
-                  marginTop: "2.5rem",
-                  animation: "fadeUp 0.6s ease 0.4s both",
-                }}
-              >
+              {/* trust badges */}
+              <div className="flex flex-wrap items-center gap-5 mt-10">
                 {[
-                  { icon: <CheckCircle2 size={14} />, text: "Terpercaya" },
-                  { icon: <Clock size={14} />, text: "Proses Cepat" },
-                  { icon: <Star size={14} />, text: "Pelayanan Prima" },
-                ].map(({ icon, text }) => (
+                  { icon: Shield, label: "Terpercaya" },
+                  { icon: Zap, label: "Proses Cepat" },
+                  { icon: CheckCircle, label: "Resmi & Sah" },
+                ].map(({ icon: Icon, label }) => (
                   <div
-                    key={text}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.375rem",
-                      fontFamily: "'Plus Jakarta Sans', sans-serif",
-                      fontSize: "0.75rem",
-                      color: "#86efac",
-                    }}
+                    key={label}
+                    className="flex items-center gap-1.5 text-sm text-gray-500"
                   >
-                    {icon} {text}
+                    <Icon className="w-4 h-4 text-green-500" />
+                    {label}
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Right – floating card illustration */}
+            {/* right: visual card */}
             <div
-              className="hero-float"
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                animation: "float 5s ease-in-out infinite",
-              }}
+              className={`transition-all duration-1000 delay-300 ${
+                heroVisible
+                  ? "opacity-100 translate-x-0"
+                  : "opacity-0 translate-x-12"
+              }`}
             >
-              <div
-                style={{
-                  background: "rgba(255,255,255,0.1)",
-                  backdropFilter: "blur(20px)",
-                  border: "1px solid rgba(255,255,255,0.2)",
-                  borderRadius: "24px",
-                  padding: "2rem",
-                  width: "100%",
-                  maxWidth: "320px",
-                  boxShadow: "0 24px 64px rgba(0,0,0,0.25)",
-                }}
-              >
-                <div
-                  style={{
-                    background: "rgba(255,255,255,0.08)",
-                    borderRadius: "16px",
-                    padding: "1.25rem",
-                    marginBottom: "1rem",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.875rem",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "2.75rem",
-                      height: "2.75rem",
-                      background: "linear-gradient(135deg, #4ade80, #22c55e)",
-                      borderRadius: "12px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
+              <div className="relative">
+                {/* main card */}
+                <div className="relative bg-white rounded-3xl shadow-2xl shadow-green-200/50 p-8 border border-green-100">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-700 rounded-2xl flex items-center justify-center">
+                      <FileText className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900">
+                        Portal Persuratan
+                      </p>
+                      <p className="text-sm text-gray-500">Desa Sukamaju</p>
+                    </div>
+                    <span className="ml-auto px-2.5 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+                      AKTIF
+                    </span>
+                  </div>
+
+                  {/* status items */}
+                  <div className="space-y-3">
+                    {[
+                      {
+                        label: "Surat Domisili",
+                        status: "Selesai",
+                        color: "green",
+                      },
+                      {
+                        label: "Surat Usaha",
+                        status: "Diproses",
+                        color: "yellow",
+                      },
+                      {
+                        label: "Pengantar KTP",
+                        status: "Menunggu",
+                        color: "blue",
+                      },
+                    ].map((item) => (
+                      <div
+                        key={item.label}
+                        className="flex items-center justify-between p-3.5 bg-gray-50 rounded-xl hover:bg-green-50 transition-colors duration-150"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-2 h-2 rounded-full ${
+                              item.color === "green"
+                                ? "bg-green-500"
+                                : item.color === "yellow"
+                                  ? "bg-yellow-500"
+                                  : "bg-blue-500"
+                            } animate-pulse`}
+                          />
+                          <span className="text-sm font-medium text-gray-700">
+                            {item.label}
+                          </span>
+                        </div>
+                        <span
+                          className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                            item.color === "green"
+                              ? "bg-green-100 text-green-700"
+                              : item.color === "yellow"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-blue-100 text-blue-700"
+                          }`}
+                        >
+                          {item.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Link
+                    to="/cek-surat"
+                    className="mt-5 flex items-center justify-center gap-2 w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-3 rounded-xl text-sm font-semibold hover:from-green-700 hover:to-green-800 transition-all duration-200"
                   >
-                    <FileText size={18} color="white" />
-                  </div>
-                  <div>
-                    <div
-                      style={{
-                        fontFamily: "'Lora', serif",
-                        fontWeight: 600,
-                        color: "white",
-                        fontSize: "0.9rem",
-                      }}
-                    >
-                      Surat Masuk
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: "'Plus Jakarta Sans', sans-serif",
-                        fontSize: "0.75rem",
-                        color: "#86efac",
-                      }}
-                    >
-                      Diproses hari ini
-                    </div>
-                  </div>
+                    Cek Status Surat Anda
+                    <ChevronRight className="w-4 h-4" />
+                  </Link>
                 </div>
-                {[
-                  {
-                    label: "Total Surat Masuk",
-                    val: "1,240",
-                    color: "#4ade80",
-                  },
-                  { label: "Surat Keluar", val: "892", color: "#86efac" },
-                  { label: "Sedang Diproses", val: "37", color: "#fbbf24" },
-                  { label: "Selesai Bulan Ini", val: "156", color: "#34d399" },
-                ].map(({ label, val, color }) => (
-                  <div
-                    key={label}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "0.625rem 0",
-                      borderBottom: "1px solid rgba(255,255,255,0.08)",
-                      fontFamily: "'Plus Jakarta Sans', sans-serif",
-                    }}
-                  >
-                    <span style={{ fontSize: "0.78rem", color: "#bbf7d0" }}>
-                      {label}
-                    </span>
-                    <span
-                      style={{ fontSize: "0.875rem", fontWeight: 700, color }}
-                    >
-                      {val}
-                    </span>
-                  </div>
-                ))}
-                <div style={{ marginTop: "1rem", textAlign: "center" }}>
-                  <span
-                    style={{
-                      fontFamily: "'Plus Jakarta Sans', sans-serif",
-                      fontSize: "0.7rem",
-                      color: "#6ee7b7",
-                      background: "rgba(255,255,255,0.06)",
-                      borderRadius: "6px",
-                      padding: "0.25rem 0.75rem",
-                    }}
-                  >
-                    ✦ Update Otomatis
+
+                {/* floating badge top-right */}
+                <div className="absolute -top-4 -right-4 bg-white rounded-2xl shadow-lg px-4 py-2 border border-green-100 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-green-600" />
+                  <span className="text-xs font-bold text-green-700">
+                    98% Puas
+                  </span>
+                </div>
+
+                {/* floating badge bottom-left */}
+                <div className="absolute -bottom-4 -left-4 bg-white rounded-2xl shadow-lg px-4 py-2 border border-green-100 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-green-600" />
+                  <span className="text-xs font-bold text-green-700">
+                    ≤ 24 Jam Proses
                   </span>
                 </div>
               </div>
@@ -595,409 +385,222 @@ const HomePage = () => {
           </div>
         </div>
 
-        {/* Wave bottom */}
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0 }}>
-          <svg
-            viewBox="0 0 1440 60"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            preserveAspectRatio="none"
-          >
-            <path
-              d="M0 60L1440 60L1440 20C1200 60 800 0 400 40C200 60 100 20 0 40L0 60Z"
-              fill="#fefdf8"
-            />
+        {/* bottom wave */}
+        <div className="absolute bottom-0 left-0 right-0">
+          <svg viewBox="0 0 1440 60" className="w-full fill-gray-50">
+            <path d="M0,30 C360,0 1080,60 1440,30 L1440,60 L0,60 Z" />
           </svg>
         </div>
-
-        <style>{`
-          @media (max-width: 768px) {
-            .hero-grid { grid-template-columns: 1fr !important; }
-            .hero-grid > div:last-child { display: none !important; }
-          }
-        `}</style>
       </section>
 
-      {/* ── Stats ── */}
-      <section
-        ref={statsRef}
-        style={{
-          background: "linear-gradient(135deg, #15803d, #16a34a)",
-          padding: "3rem 1.5rem",
-        }}
-      >
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: "0.5rem",
-            }}
-            className="stats-grid"
-          >
-            <StatCard
-              value={5240}
-              suffix="+"
-              label="Total Warga Terlayani"
-              icon={Users}
-              delay={0}
-              started={statsStarted}
-            />
-            <StatCard
-              value={1240}
-              label="Surat Diproses"
-              icon={FileText}
-              delay={100}
-              started={statsStarted}
-            />
-            <StatCard
-              value={12}
-              label="Jenis Layanan"
-              icon={Star}
-              delay={200}
-              started={statsStarted}
-            />
-            <StatCard
-              value={99}
-              suffix="%"
-              label="Tingkat Kepuasan"
-              icon={Heart}
-              delay={300}
-              started={statsStarted}
-            />
-          </div>
-        </div>
-        <style>{`
-          @media (max-width: 640px) { .stats-grid { grid-template-columns: repeat(2,1fr) !important; } }
-        `}</style>
-      </section>
-
-      {/* ── Layanan ── */}
-      <section
-        style={{ padding: "5rem 1.5rem", background: "#fefdf8" }}
-        className="leaf-bg"
-      >
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: "3rem" }}>
-            <span
-              style={{
-                display: "inline-block",
-                background: "#dcfce7",
-                color: "#15803d",
-                padding: "0.25rem 0.875rem",
-                borderRadius: "9999px",
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: "0.75rem",
-                fontWeight: 600,
-                letterSpacing: "0.05em",
-                marginBottom: "0.875rem",
-              }}
-            >
-              LAYANAN KAMI
-            </span>
-            <h2
-              style={{
-                fontFamily: "'Lora', serif",
-                fontSize: "2rem",
-                fontWeight: 700,
-                color: "#14532d",
-                marginBottom: "0.75rem",
-              }}
-            >
-              Apa yang Bisa Kami Bantu?
-            </h2>
-            <p
-              style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: "0.9rem",
-                color: "#4b5563",
-                maxWidth: "480px",
-                margin: "0 auto",
-                lineHeight: 1.7,
-              }}
-            >
-              Berbagai layanan administrasi dan persuratan yang siap membantu
-              kebutuhan warga desa.
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: "1.25rem",
-            }}
-            className="services-grid"
-          >
-            {services.map((s, i) => (
-              <ServiceCard key={s.title} {...s} delay={i * 80} />
-            ))}
-          </div>
-
-          <div style={{ textAlign: "center", marginTop: "2.5rem" }}>
-            <Link
-              to="/layanan"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.875rem 2rem",
-                background: "#15803d",
-                color: "white",
-                borderRadius: "9999px",
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                textDecoration: "none",
-                transition: "all 0.2s",
-                boxShadow: "0 4px 14px rgba(22,163,74,0.3)",
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.background = "#14532d";
-                e.currentTarget.style.transform = "translateY(-1px)";
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.background = "#15803d";
-                e.currentTarget.style.transform = "translateY(0)";
-              }}
-            >
-              Lihat Semua Layanan <ArrowRight size={16} />
-            </Link>
-          </div>
-        </div>
-        <style>{`
-          @media (max-width: 900px) { .services-grid { grid-template-columns: repeat(2, 1fr) !important; } }
-          @media (max-width: 580px) { .services-grid { grid-template-columns: 1fr !important; } }
-        `}</style>
-      </section>
-
-      {/* ── Cara Kerja ── */}
-      <section style={{ padding: "5rem 1.5rem", background: "#f0fdf4" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: "3rem" }}>
-            <span
-              style={{
-                display: "inline-block",
-                background: "#dcfce7",
-                color: "#15803d",
-                padding: "0.25rem 0.875rem",
-                borderRadius: "9999px",
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: "0.75rem",
-                fontWeight: 600,
-                letterSpacing: "0.05em",
-                marginBottom: "0.875rem",
-              }}
-            >
-              CARA KERJA
-            </span>
-            <h2
-              style={{
-                fontFamily: "'Lora', serif",
-                fontSize: "2rem",
-                fontWeight: 700,
-                color: "#14532d",
-                marginBottom: "0.75rem",
-              }}
-            >
-              Proses yang Mudah & Cepat
-            </h2>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: "1.5rem",
-            }}
-            className="steps-grid"
-          >
-            {steps.map((s, i) => (
-              <div
-                key={s.num}
-                style={{ textAlign: "center", position: "relative" }}
-              >
-                {i < steps.length - 1 && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "1.5rem",
-                      left: "calc(50% + 2rem)",
-                      width: "calc(100% - 4rem)",
-                      height: "2px",
-                      background: "linear-gradient(to right, #86efac, #dcfce7)",
-                    }}
-                  />
-                )}
-                <div
-                  style={{
-                    width: "3rem",
-                    height: "3rem",
-                    background: "linear-gradient(135deg, #15803d, #16a34a)",
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    margin: "0 auto 1.25rem",
-                    fontFamily: "'Lora', serif",
-                    fontWeight: 700,
-                    fontSize: "0.875rem",
-                    color: "white",
-                    boxShadow: "0 4px 14px rgba(22,163,74,0.3)",
-                    position: "relative",
-                    zIndex: 1,
-                  }}
-                >
-                  {s.num}
+      {/* ══════════════════════════════════
+          STATS
+      ══════════════════════════════════ */}
+      <section className="bg-gray-50 py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            {stats.map((s, i) => (
+              <FadeIn key={s.label} delay={i * 100}>
+                <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-green-50 hover:shadow-md hover:border-green-200 transition-all duration-300 group hover:-translate-y-1">
+                  <div className="w-12 h-12 bg-green-50 group-hover:bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-4 transition-colors duration-300">
+                    <s.icon className="w-6 h-6 text-green-600" />
+                  </div>
+                  <p className="text-3xl font-extrabold text-green-700 mb-1">
+                    <Counter target={s.value} suffix={s.suffix} />
+                  </p>
+                  <p className="text-sm text-gray-500 font-medium">{s.label}</p>
                 </div>
-                <h3
-                  style={{
-                    fontFamily: "'Lora', serif",
-                    fontWeight: 600,
-                    color: "#14532d",
-                    fontSize: "0.9rem",
-                    marginBottom: "0.5rem",
-                  }}
-                >
-                  {s.title}
-                </h3>
-                <p
-                  style={{
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                    fontSize: "0.8rem",
-                    color: "#4b5563",
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {s.desc}
-                </p>
-              </div>
+              </FadeIn>
             ))}
           </div>
         </div>
-        <style>{`
-          @media (max-width: 640px) { .steps-grid { grid-template-columns: repeat(2, 1fr) !important; } }
-        `}</style>
       </section>
 
-      {/* ── CTA Banner ── */}
-      <section
-        style={{
-          padding: "4rem 1.5rem",
-          background:
-            "linear-gradient(135deg, #052e16 0%, #14532d 50%, #15803d 100%)",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            top: "-30%",
-            right: "-5%",
-            width: "400px",
-            height: "400px",
-            background:
-              "radial-gradient(circle, rgba(74,222,128,0.12) 0%, transparent 70%)",
-            borderRadius: "50%",
-          }}
-        />
-        <div
-          style={{
-            maxWidth: "700px",
-            margin: "0 auto",
-            textAlign: "center",
-            position: "relative",
-          }}
-        >
-          <h2
-            style={{
-              fontFamily: "'Lora', serif",
-              fontSize: "2rem",
-              fontWeight: 700,
-              color: "white",
-              marginBottom: "1rem",
-            }}
-          >
-            Butuh Bantuan Layanan Desa?
-          </h2>
-          <p
-            style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: "0.9rem",
-              color: "#bbf7d0",
-              lineHeight: 1.8,
-              marginBottom: "2rem",
-            }}
-          >
-            Tim kami siap membantu Anda dalam mengurus berbagai administrasi
-            desa. Datangi kantor kami atau hubungi langsung via WhatsApp.
-          </p>
-          <div
-            style={{
-              display: "flex",
-              gap: "1rem",
-              justifyContent: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            <Link
-              to="/kontak"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.875rem 1.75rem",
-                background: "white",
-                color: "#15803d",
-                borderRadius: "9999px",
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontWeight: 700,
-                fontSize: "0.875rem",
-                textDecoration: "none",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
-                transition: "all 0.2s",
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.transform = "translateY(-2px)";
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-              }}
-            >
-              <Phone size={16} /> Hubungi Kami
-            </Link>
-            <Link
-              to="/layanan"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.875rem 1.75rem",
-                background: "rgba(255,255,255,0.12)",
-                border: "1px solid rgba(255,255,255,0.25)",
-                color: "white",
-                borderRadius: "9999px",
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                textDecoration: "none",
-                transition: "all 0.2s",
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.background = "rgba(255,255,255,0.2)";
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.background = "rgba(255,255,255,0.12)";
-              }}
-            >
-              <ChevronRight size={16} /> Lihat Layanan
-            </Link>
+      {/* ══════════════════════════════════
+          SERVICES
+      ══════════════════════════════════ */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <FadeIn>
+            <div className="text-center mb-14">
+              <span className="inline-block px-4 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold mb-4">
+                Layanan Kami
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
+                Berbagai Kebutuhan Surat
+              </h2>
+              <p className="text-gray-500 max-w-xl mx-auto">
+                Kami menyediakan berbagai layanan surat menyurat resmi untuk
+                memenuhi kebutuhan administrasi warga desa.
+              </p>
+            </div>
+          </FadeIn>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {services.map((s, i) => (
+              <FadeIn key={s.title} delay={i * 100}>
+                <div className="group bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-xl hover:shadow-green-100/50 hover:-translate-y-2 transition-all duration-300 cursor-pointer">
+                  <div
+                    className={`w-14 h-14 bg-gradient-to-br ${s.color} rounded-2xl flex items-center justify-center text-2xl mb-5 group-hover:scale-110 transition-transform duration-300`}
+                  >
+                    {s.icon}
+                  </div>
+                  <h3 className="font-bold text-gray-900 mb-2 text-sm leading-snug group-hover:text-green-700 transition-colors">
+                    {s.title}
+                  </h3>
+                  <p className="text-gray-500 text-xs leading-relaxed mb-4">
+                    {s.desc}
+                  </p>
+                  <Link
+                    to="/layanan"
+                    className="inline-flex items-center gap-1 text-green-600 text-xs font-semibold hover:gap-2 transition-all duration-200"
+                  >
+                    Selengkapnya <ArrowRight className="w-3 h-3" />
+                  </Link>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+
+          <FadeIn>
+            <div className="text-center mt-10">
+              <Link
+                to="/layanan"
+                className="inline-flex items-center gap-2 border-2 border-green-600 text-green-700 px-6 py-3 rounded-xl font-semibold hover:bg-green-600 hover:text-white transition-all duration-200 text-sm"
+              >
+                Lihat Semua Layanan <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════
+          HOW IT WORKS
+      ══════════════════════════════════ */}
+      <section className="py-20 bg-gradient-to-br from-green-50 to-emerald-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <FadeIn>
+            <div className="text-center mb-14">
+              <span className="inline-block px-4 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold mb-4">
+                Cara Kerja
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
+                Proses Pengajuan Mudah
+              </h2>
+              <p className="text-gray-500 max-w-xl mx-auto">
+                Hanya 4 langkah sederhana untuk mendapatkan surat yang Anda
+                butuhkan.
+              </p>
+            </div>
+          </FadeIn>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 relative">
+            {/* connector line (desktop) */}
+            <div className="hidden lg:block absolute top-10 left-[12.5%] right-[12.5%] h-0.5 bg-gradient-to-r from-green-300 via-green-400 to-green-300" />
+
+            {steps.map((step, i) => (
+              <FadeIn key={step.step} delay={i * 150}>
+                <div className="relative bg-white rounded-2xl p-6 shadow-sm border border-green-100 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 text-center">
+                  <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-700 rounded-full flex items-center justify-center mx-auto mb-5 text-white font-extrabold text-lg shadow-lg shadow-green-200 relative z-10">
+                    {step.step}
+                  </div>
+                  <h3 className="font-bold text-gray-900 mb-2 text-sm">
+                    {step.title}
+                  </h3>
+                  <p className="text-gray-500 text-xs leading-relaxed">
+                    {step.desc}
+                  </p>
+                </div>
+              </FadeIn>
+            ))}
           </div>
         </div>
+      </section>
+
+      {/* ══════════════════════════════════
+          TESTIMONIALS
+      ══════════════════════════════════ */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <FadeIn>
+            <div className="text-center mb-14">
+              <span className="inline-block px-4 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold mb-4">
+                Testimoni
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
+                Kata Warga Kami
+              </h2>
+            </div>
+          </FadeIn>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {testimonials.map((t, i) => (
+              <FadeIn key={t.name} delay={i * 100}>
+                <div className="bg-gradient-to-br from-green-50 to-white border border-green-100 rounded-2xl p-6 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                  <div className="flex mb-3">
+                    {[...Array(t.rating)].map((_, j) => (
+                      <Star
+                        key={j}
+                        className="w-4 h-4 text-yellow-400 fill-current"
+                      />
+                    ))}
+                  </div>
+                  <p className="text-gray-600 text-sm leading-relaxed mb-5 italic">
+                    "{t.text}"
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-700 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                      {t.name[0]}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 text-sm">
+                        {t.name}
+                      </p>
+                      <p className="text-xs text-gray-500">{t.role}</p>
+                    </div>
+                  </div>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════
+          CTA BANNER
+      ══════════════════════════════════ */}
+      <section className="py-16 bg-gradient-to-r from-green-600 to-green-800 relative overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-20 -right-20 w-80 h-80 bg-white/5 rounded-full" />
+          <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-white/5 rounded-full" />
+        </div>
+        <FadeIn>
+          <div className="relative max-w-4xl mx-auto px-4 text-center">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">
+              Butuh Surat? Kami Siap Membantu!
+            </h2>
+            <p className="text-green-100 mb-8 max-w-2xl mx-auto">
+              Hubungi kantor desa atau manfaatkan sistem digital kami untuk
+              keperluan administrasi surat menyurat yang cepat dan mudah.
+            </p>
+            <div className="flex flex-wrap justify-center gap-4">
+              <Link
+                to="/layanan"
+                className="inline-flex items-center gap-2 bg-white text-green-700 px-6 py-3.5 rounded-xl font-bold hover:bg-green-50 transition-all duration-200 shadow-lg hover:-translate-y-1 transform text-sm"
+              >
+                Mulai Sekarang <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                to="/kontak"
+                className="inline-flex items-center gap-2 border-2 border-white text-white px-6 py-3.5 rounded-xl font-semibold hover:bg-white hover:text-green-700 transition-all duration-200 hover:-translate-y-1 transform text-sm"
+              >
+                Hubungi Kami
+              </Link>
+            </div>
+          </div>
+        </FadeIn>
       </section>
     </div>
   );
-};
-
-export default HomePage;
+}
