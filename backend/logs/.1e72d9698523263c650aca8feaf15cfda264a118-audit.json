@@ -39,6 +39,11 @@
             "date": 1778640093606,
             "name": "/home/iamrnldo/Projects/persuratan/backend/logs/application-2026-05-13.log",
             "hash": "150ac71d4de1243b1bc54851ee10d3474b94ac1854955286df3aa38ff0220faf"
+        },
+        {
+            "date": 1778718374321,
+            "name": "/home/iamrnldo/Projects/persuratan/backend/logs/application-2026-05-14.log",
+            "hash": "af00d9c12e7089ea5cbba3ee0854ff122240ddb6e45f40782365a91b3f7db456"
         }
     ],
     "hashType": "sha256"
