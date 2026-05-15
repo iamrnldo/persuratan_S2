@@ -1,3 +1,4 @@
+// backend/src/controllers/klasifikasiSuratController.js
 const { query } = require("../config/database");
 
 const getAllKlasifikasiSurat = async (req, res, next) => {
@@ -7,32 +8,28 @@ const getAllKlasifikasiSurat = async (req, res, next) => {
 
     let conditions = [];
     let params = [];
-    let paramIndex = 1;
 
     if (search) {
       conditions.push(
-        `(kode ILIKE $${paramIndex} OR nama ILIKE $${paramIndex})`,
+        `(LOWER(kode) LIKE LOWER(?) OR LOWER(nama) LIKE LOWER(?))`,
       );
-      params.push(`%${search}%`);
-      paramIndex++;
+      params.push(`%${search}%`, `%${search}%`);
     }
 
     const whereClause =
       conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
-    const countResult = await query(
-      `SELECT COUNT(*) FROM public.klasifikasi_surat ${whereClause}`,
+    const countResult = query(
+      `SELECT COUNT(*) as count FROM klasifikasi_surat ${whereClause}`,
       params,
     );
-    const total = parseInt(countResult.rows[0].count);
+    const total = countResult.rows[0].count;
 
-    params.push(parseInt(limit), offset);
-    const result = await query(
-      `SELECT * FROM public.klasifikasi_surat 
-       ${whereClause} 
-       ORDER BY kode ASC 
-       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-      params,
+    const result = query(
+      `SELECT * FROM klasifikasi_surat ${whereClause}
+       ORDER BY kode ASC
+       LIMIT ? OFFSET ?`,
+      [...params, parseInt(limit), offset],
     );
 
     res.status(200).json({
@@ -54,21 +51,21 @@ const getAllKlasifikasiSurat = async (req, res, next) => {
 const getKlasifikasiSuratById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await query(
-      "SELECT * FROM public.klasifikasi_surat WHERE id = $1",
-      [id],
-    );
+    const result = query(`SELECT * FROM klasifikasi_surat WHERE id = ?`, [id]);
+
     if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Klasifikasi surat tidak ditemukan",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "Klasifikasi surat tidak ditemukan" });
     }
-    res.status(200).json({
-      success: true,
-      message: "Data klasifikasi surat berhasil diambil",
-      data: result.rows[0],
-    });
+
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Data klasifikasi surat berhasil diambil",
+        data: result.rows[0],
+      });
   } catch (error) {
     next(error);
   }
@@ -78,30 +75,32 @@ const createKlasifikasiSurat = async (req, res, next) => {
   try {
     const { kode, nama, keterangan } = req.body;
 
-    // Cek kode unik
-    const kodeCheck = await query(
-      "SELECT id FROM public.klasifikasi_surat WHERE kode = $1",
-      [kode],
-    );
+    const kodeCheck = query(`SELECT id FROM klasifikasi_surat WHERE kode = ?`, [
+      kode,
+    ]);
     if (kodeCheck.rows.length > 0) {
-      return res.status(409).json({
-        success: false,
-        message: "Kode klasifikasi sudah digunakan",
-      });
+      return res
+        .status(409)
+        .json({ success: false, message: "Kode klasifikasi sudah digunakan" });
     }
 
-    const result = await query(
-      `INSERT INTO public.klasifikasi_surat (kode, nama, keterangan) 
-       VALUES ($1, $2, $3) 
-       RETURNING *`,
+    query(
+      `INSERT INTO klasifikasi_surat (kode, nama, keterangan) VALUES (?, ?, ?)`,
       [kode, nama, keterangan || null],
     );
 
-    res.status(201).json({
-      success: true,
-      message: "Klasifikasi surat berhasil dibuat",
-      data: result.rows[0],
-    });
+    const newData = query(
+      `SELECT * FROM klasifikasi_surat WHERE id = (SELECT last_insert_rowid())`,
+      [],
+    );
+
+    res
+      .status(201)
+      .json({
+        success: true,
+        message: "Klasifikasi surat berhasil dibuat",
+        data: newData.rows[0],
+      });
   } catch (error) {
     next(error);
   }
@@ -112,45 +111,53 @@ const updateKlasifikasiSurat = async (req, res, next) => {
     const { id } = req.params;
     const { kode, nama, keterangan } = req.body;
 
-    const existCheck = await query(
-      "SELECT id FROM public.klasifikasi_surat WHERE id = $1",
-      [id],
-    );
+    const existCheck = query(`SELECT * FROM klasifikasi_surat WHERE id = ?`, [
+      id,
+    ]);
     if (existCheck.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Klasifikasi surat tidak ditemukan",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "Klasifikasi surat tidak ditemukan" });
     }
 
     if (kode) {
-      const kodeCheck = await query(
-        "SELECT id FROM public.klasifikasi_surat WHERE kode = $1 AND id != $2",
+      const kodeCheck = query(
+        `SELECT id FROM klasifikasi_surat WHERE kode = ? AND id != ?`,
         [kode, id],
       );
       if (kodeCheck.rows.length > 0) {
-        return res.status(409).json({
-          success: false,
-          message: "Kode klasifikasi sudah digunakan",
-        });
+        return res
+          .status(409)
+          .json({
+            success: false,
+            message: "Kode klasifikasi sudah digunakan",
+          });
       }
     }
 
-    const result = await query(
-      `UPDATE public.klasifikasi_surat 
-       SET kode = COALESCE($1, kode),
-           nama = COALESCE($2, nama),
-           keterangan = COALESCE($3, keterangan)
-       WHERE id = $4 
-       RETURNING *`,
-      [kode, nama, keterangan, id],
+    const current = existCheck.rows[0];
+
+    query(
+      `UPDATE klasifikasi_surat
+       SET kode = ?, nama = ?, keterangan = ?, updated_at = datetime('now')
+       WHERE id = ?`,
+      [
+        kode ?? current.kode,
+        nama ?? current.nama,
+        keterangan ?? current.keterangan,
+        id,
+      ],
     );
 
-    res.status(200).json({
-      success: true,
-      message: "Klasifikasi surat berhasil diupdate",
-      data: result.rows[0],
-    });
+    const updated = query(`SELECT * FROM klasifikasi_surat WHERE id = ?`, [id]);
+
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Klasifikasi surat berhasil diupdate",
+        data: updated.rows[0],
+      });
   } catch (error) {
     next(error);
   }
@@ -159,20 +166,20 @@ const updateKlasifikasiSurat = async (req, res, next) => {
 const deleteKlasifikasiSurat = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await query(
-      "DELETE FROM public.klasifikasi_surat WHERE id = $1 RETURNING id",
-      [id],
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Klasifikasi surat tidak ditemukan",
-      });
+
+    const existCheck = query(`SELECT id FROM klasifikasi_surat WHERE id = ?`, [
+      id,
+    ]);
+    if (existCheck.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Klasifikasi surat tidak ditemukan" });
     }
-    res.status(200).json({
-      success: true,
-      message: "Klasifikasi surat berhasil dihapus",
-    });
+
+    query(`DELETE FROM klasifikasi_surat WHERE id = ?`, [id]);
+    res
+      .status(200)
+      .json({ success: true, message: "Klasifikasi surat berhasil dihapus" });
   } catch (error) {
     next(error);
   }

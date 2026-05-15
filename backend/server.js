@@ -1,8 +1,8 @@
-
+// backend/server.js
 const http = require("http");
 const https = require("https");
 const app = require("./src/app");
-const { pool } = require("./src/config/database");
+const { db } = require("./src/config/database"); // ← ganti pool → db
 const { getSSLConfig } = require("./src/config/ssl");
 require("dotenv").config();
 
@@ -17,7 +17,8 @@ const server = sslConfig
   ? https.createServer(sslConfig, app)
   : http.createServer(app);
 
-server.listen(PORT, async () => {
+server.listen(PORT, () => {
+  // ← hapus async, SQLite tidak butuh await koneksi
   console.log("================================================");
   console.log(`🚀 Server berjalan di port ${PORT}`);
   console.log(`📌 Environment: ${NODE_ENV}`);
@@ -28,10 +29,10 @@ server.listen(PORT, async () => {
   );
   console.log("================================================");
 
-  // Test database connection
+  // Test koneksi SQLite — sync, langsung cek
   try {
-    await pool.query("SELECT NOW()");
-    console.log("✅ Koneksi database berhasil");
+    db.prepare("SELECT 1").get();
+    console.log("✅ Koneksi database SQLite berhasil");
   } catch (error) {
     console.error("❌ Koneksi database gagal:", error.message);
     process.exit(1);
@@ -39,14 +40,15 @@ server.listen(PORT, async () => {
 });
 
 // Graceful shutdown
-const shutdown = async (signal) => {
+const shutdown = (signal) => {
+  // ← hapus async
   console.log(`\n🛑 ${signal} received. Shutting down gracefully...`);
 
-  server.close(async () => {
+  server.close(() => {
     console.log("🔌 HTTP server closed");
 
     try {
-      await pool.end();
+      db.close(); // ← ganti pool.end() → db.close()
       console.log("🔌 Database connection closed");
       console.log("✅ Server shutdown complete");
       process.exit(0);

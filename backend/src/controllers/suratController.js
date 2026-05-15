@@ -1,9 +1,10 @@
+// backend/src/controllers/suratController.js
 const { query } = require("../config/database");
 const path = require("path");
 const fs = require("fs");
 
 // =============================================
-// GET ALL SURAT (dengan filter & pagination)
+// GET ALL SURAT
 // =============================================
 const getAllSurat = async (req, res, next) => {
   try {
@@ -21,64 +22,57 @@ const getAllSurat = async (req, res, next) => {
     const offset = (parseInt(page) - 1) * parseInt(limit);
     let conditions = [];
     let params = [];
-    let paramIndex = 1;
 
     if (jenis) {
-      conditions.push(`s.jenis = $${paramIndex}`);
+      conditions.push(`s.jenis = ?`);
       params.push(jenis);
-      paramIndex++;
     }
     if (status) {
-      conditions.push(`s.status = $${paramIndex}`);
+      conditions.push(`s.status = ?`);
       params.push(status);
-      paramIndex++;
     }
     if (klasifikasi_id) {
-      conditions.push(`s.klasifikasi_id = $${paramIndex}`);
+      conditions.push(`s.klasifikasi_id = ?`);
       params.push(klasifikasi_id);
-      paramIndex++;
     }
     if (search) {
+      // SQLite: LIKE + LOWER() sebagai pengganti ILIKE
       conditions.push(
-        `(s.perihal ILIKE $${paramIndex} OR s.nomor_surat ILIKE $${paramIndex} OR s.pengirim_tujuan ILIKE $${paramIndex} OR s.nomor_agenda ILIKE $${paramIndex})`,
+        `(LOWER(s.perihal) LIKE LOWER(?) OR LOWER(s.nomor_surat) LIKE LOWER(?) OR LOWER(s.pengirim_tujuan) LIKE LOWER(?) OR LOWER(s.nomor_agenda) LIKE LOWER(?))`,
       );
-      params.push(`%${search}%`);
-      paramIndex++;
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
     if (tanggal_dari) {
-      conditions.push(`s.tanggal_dokumen >= $${paramIndex}`);
+      conditions.push(`s.tanggal_dokumen >= ?`);
       params.push(tanggal_dari);
-      paramIndex++;
     }
     if (tanggal_sampai) {
-      conditions.push(`s.tanggal_dokumen <= $${paramIndex}`);
+      conditions.push(`s.tanggal_dokumen <= ?`);
       params.push(tanggal_sampai);
-      paramIndex++;
     }
 
     const whereClause =
       conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
-    const countResult = await query(
-      `SELECT COUNT(*) FROM public.surat s ${whereClause}`,
+    const countResult = query(
+      `SELECT COUNT(*) as count FROM surat s ${whereClause}`,
       params,
     );
-    const total = parseInt(countResult.rows[0].count);
+    const total = countResult.rows[0].count;
 
-    params.push(parseInt(limit), offset);
-    const result = await query(
-      `SELECT 
+    const result = query(
+      `SELECT
         s.*,
         ks.kode AS klasifikasi_kode,
         ks.nama AS klasifikasi_nama,
         a.nama AS created_by_nama
-       FROM public.surat s
-       LEFT JOIN public.klasifikasi_surat ks ON s.klasifikasi_id = ks.id
-       LEFT JOIN public.admin a ON s.created_by = a.id
+       FROM surat s
+       LEFT JOIN klasifikasi_surat ks ON s.klasifikasi_id = ks.id
+       LEFT JOIN admin a ON s.created_by = a.id
        ${whereClause}
        ORDER BY s.tanggal_dokumen DESC, s.created_at DESC
-       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-      params,
+       LIMIT ? OFFSET ?`,
+      [...params, parseInt(limit), offset],
     );
 
     res.status(200).json({
@@ -104,30 +98,27 @@ const getSuratById = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const suratResult = await query(
-      `SELECT 
+    const suratResult = query(
+      `SELECT
         s.*,
         ks.kode AS klasifikasi_kode,
         ks.nama AS klasifikasi_nama,
         a.nama AS created_by_nama
-       FROM public.surat s
-       LEFT JOIN public.klasifikasi_surat ks ON s.klasifikasi_id = ks.id
-       LEFT JOIN public.admin a ON s.created_by = a.id
-       WHERE s.id = $1`,
+       FROM surat s
+       LEFT JOIN klasifikasi_surat ks ON s.klasifikasi_id = ks.id
+       LEFT JOIN admin a ON s.created_by = a.id
+       WHERE s.id = ?`,
       [id],
     );
 
     if (suratResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Surat tidak ditemukan",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "Surat tidak ditemukan" });
     }
 
-    const disposisiResult = await query(
-      `SELECT * FROM public.disposisi 
-       WHERE surat_id = $1 
-       ORDER BY created_at ASC`,
+    const disposisiResult = query(
+      `SELECT * FROM disposisi WHERE surat_id = ? ORDER BY created_at ASC`,
       [id],
     );
 
@@ -164,7 +155,6 @@ const createSurat = async (req, res, next) => {
 
     const created_by = req.user?.id || null;
 
-    // Handle file upload
     let file_path = null;
     let file_name = null;
     let file_size = null;
@@ -175,13 +165,12 @@ const createSurat = async (req, res, next) => {
       file_size = req.file.size;
     }
 
-    const result = await query(
-      `INSERT INTO public.surat 
+    const insertResult = query(
+      `INSERT INTO surat
        (jenis, nomor_agenda, nomor_surat, tanggal_surat, tanggal_dokumen,
         pengirim_tujuan, perihal, klasifikasi_id, file_path, file_name,
         file_size, status, keterangan, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
-       RETURNING *`,
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         jenis,
         nomor_agenda || null,
@@ -200,10 +189,19 @@ const createSurat = async (req, res, next) => {
       ],
     );
 
+    // Ambil data lengkap surat yang baru dibuat
+    const newSurat = query(
+      `SELECT s.*, ks.kode AS klasifikasi_kode, ks.nama AS klasifikasi_nama
+       FROM surat s
+       LEFT JOIN klasifikasi_surat ks ON s.klasifikasi_id = ks.id
+       WHERE s.id = (SELECT last_insert_rowid())`,
+      [],
+    );
+
     res.status(201).json({
       success: true,
       message: "Surat berhasil ditambahkan",
-      data: result.rows[0],
+      data: newSurat.rows[0],
     });
   } catch (error) {
     next(error);
@@ -229,79 +227,80 @@ const updateSurat = async (req, res, next) => {
       keterangan,
     } = req.body;
 
-    const existCheck = await query("SELECT * FROM public.surat WHERE id = $1", [
-      id,
-    ]);
+    const existCheck = query(`SELECT * FROM surat WHERE id = ?`, [id]);
     if (existCheck.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Surat tidak ditemukan",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "Surat tidak ditemukan" });
     }
 
-    // Handle file upload baru
-    let file_path = existCheck.rows[0].file_path;
-    let file_name = existCheck.rows[0].file_name;
-    let file_size = existCheck.rows[0].file_size;
+    const current = existCheck.rows[0];
+
+    // Handle file baru — hapus file lama jika ada
+    let file_path = current.file_path;
+    let file_name = current.file_name;
+    let file_size = current.file_size;
 
     if (req.file) {
-      // Hapus file lama jika ada
-      if (existCheck.rows[0].file_path) {
-        const oldPath = path.join(
-          __dirname,
-          "../..",
-          existCheck.rows[0].file_path,
-        );
-        if (fs.existsSync(oldPath)) {
-          fs.unlinkSync(oldPath);
-        }
+      if (current.file_path) {
+        const oldPath = path.join(__dirname, "../..", current.file_path);
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
       }
       file_path = `/uploads/surat/${req.file.filename}`;
       file_name = req.file.originalname;
       file_size = req.file.size;
     }
 
-    const result = await query(
-      `UPDATE public.surat SET
-        jenis = COALESCE($1, jenis),
-        nomor_agenda = COALESCE($2, nomor_agenda),
-        nomor_surat = COALESCE($3, nomor_surat),
-        tanggal_surat = COALESCE($4, tanggal_surat),
-        tanggal_dokumen = COALESCE($5, tanggal_dokumen),
-        pengirim_tujuan = COALESCE($6, pengirim_tujuan),
-        perihal = COALESCE($7, perihal),
-        klasifikasi_id = COALESCE($8, klasifikasi_id),
-        file_path = $9,
-        file_name = $10,
-        file_size = $11,
-        status = COALESCE($12, status),
-        keterangan = COALESCE($13, keterangan),
-        updated_at = CURRENT_TIMESTAMP
-       WHERE id = $14
-       RETURNING *`,
+    query(
+      `UPDATE surat SET
+        jenis            = ?,
+        nomor_agenda     = ?,
+        nomor_surat      = ?,
+        tanggal_surat    = ?,
+        tanggal_dokumen  = ?,
+        pengirim_tujuan  = ?,
+        perihal          = ?,
+        klasifikasi_id   = ?,
+        file_path        = ?,
+        file_name        = ?,
+        file_size        = ?,
+        status           = ?,
+        keterangan       = ?,
+        updated_at       = datetime('now')
+       WHERE id = ?`,
       [
-        jenis,
-        nomor_agenda,
-        nomor_surat,
-        tanggal_surat,
-        tanggal_dokumen,
-        pengirim_tujuan,
-        perihal,
-        klasifikasi_id,
+        jenis ?? current.jenis,
+        nomor_agenda ?? current.nomor_agenda,
+        nomor_surat ?? current.nomor_surat,
+        tanggal_surat ?? current.tanggal_surat,
+        tanggal_dokumen ?? current.tanggal_dokumen,
+        pengirim_tujuan ?? current.pengirim_tujuan,
+        perihal ?? current.perihal,
+        klasifikasi_id ?? current.klasifikasi_id,
         file_path,
         file_name,
         file_size,
-        status,
-        keterangan,
+        status ?? current.status,
+        keterangan ?? current.keterangan,
         id,
       ],
     );
 
-    res.status(200).json({
-      success: true,
-      message: "Surat berhasil diperbarui",
-      data: result.rows[0],
-    });
+    const updated = query(
+      `SELECT s.*, ks.kode AS klasifikasi_kode, ks.nama AS klasifikasi_nama
+       FROM surat s
+       LEFT JOIN klasifikasi_surat ks ON s.klasifikasi_id = ks.id
+       WHERE s.id = ?`,
+      [id],
+    );
+
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Surat berhasil diperbarui",
+        data: updated.rows[0],
+      });
   } catch (error) {
     next(error);
   }
@@ -314,30 +313,24 @@ const deleteSurat = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const existCheck = await query("SELECT * FROM public.surat WHERE id = $1", [
-      id,
-    ]);
+    const existCheck = query(`SELECT * FROM surat WHERE id = ?`, [id]);
     if (existCheck.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Surat tidak ditemukan",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "Surat tidak ditemukan" });
     }
 
-    // Hapus file jika ada
     if (existCheck.rows[0].file_path) {
-      const filePath = path.resolve(existCheck.rows[0].file_path);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
+      const filePath = path.join(
+        __dirname,
+        "../..",
+        existCheck.rows[0].file_path,
+      );
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
 
-    await query("DELETE FROM public.surat WHERE id = $1", [id]);
-
-    res.status(200).json({
-      success: true,
-      message: "Surat berhasil dihapus",
-    });
+    query(`DELETE FROM surat WHERE id = ?`, [id]);
+    res.status(200).json({ success: true, message: "Surat berhasil dihapus" });
   } catch (error) {
     next(error);
   }
@@ -351,32 +344,34 @@ const updateStatusSurat = async (req, res, next) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    const result = await query(
-      `UPDATE public.surat 
-       SET status = $1, updated_at = CURRENT_TIMESTAMP 
-       WHERE id = $2 RETURNING *`,
+    const existCheck = query(`SELECT id FROM surat WHERE id = ?`, [id]);
+    if (existCheck.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Surat tidak ditemukan" });
+    }
+
+    query(
+      `UPDATE surat SET status = ?, updated_at = datetime('now') WHERE id = ?`,
       [status, id],
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Surat tidak ditemukan",
-      });
-    }
+    const updated = query(`SELECT * FROM surat WHERE id = ?`, [id]);
 
-    res.status(200).json({
-      success: true,
-      message: "Status surat berhasil diperbarui",
-      data: result.rows[0],
-    });
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Status surat berhasil diperbarui",
+        data: updated.rows[0],
+      });
   } catch (error) {
     next(error);
   }
 };
 
 // =============================================
-// DISPOSISI
+// DISPOSISI — CREATE
 // =============================================
 const createDisposisi = async (req, res, next) => {
   try {
@@ -384,23 +379,16 @@ const createDisposisi = async (req, res, next) => {
     const { dari, kepada, instruksi, catatan, tanggal_disposisi, status } =
       req.body;
 
-    // Cek surat ada
-    const suratCheck = await query(
-      "SELECT id FROM public.surat WHERE id = $1",
-      [surat_id],
-    );
+    const suratCheck = query(`SELECT id FROM surat WHERE id = ?`, [surat_id]);
     if (suratCheck.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Surat tidak ditemukan",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "Surat tidak ditemukan" });
     }
 
-    const result = await query(
-      `INSERT INTO public.disposisi 
-       (surat_id, dari, kepada, instruksi, catatan, tanggal_disposisi, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING *`,
+    query(
+      `INSERT INTO disposisi (surat_id, dari, kepada, instruksi, catatan, tanggal_disposisi, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         surat_id,
         dari,
@@ -412,79 +400,100 @@ const createDisposisi = async (req, res, next) => {
       ],
     );
 
-    // Update status surat jadi diproses otomatis
-    await query(
-      `UPDATE public.surat SET status = 'diproses', updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+    const newDisposisi = query(
+      `SELECT * FROM disposisi WHERE id = (SELECT last_insert_rowid())`,
+      [],
+    );
+
+    // Update status surat jadi diproses
+    query(
+      `UPDATE surat SET status = 'diproses', updated_at = datetime('now') WHERE id = ?`,
       [surat_id],
     );
 
-    res.status(201).json({
-      success: true,
-      message: "Disposisi berhasil ditambahkan",
-      data: result.rows[0],
-    });
+    res
+      .status(201)
+      .json({
+        success: true,
+        message: "Disposisi berhasil ditambahkan",
+        data: newDisposisi.rows[0],
+      });
   } catch (error) {
     next(error);
   }
 };
 
+// =============================================
+// DISPOSISI — UPDATE
+// =============================================
 const updateDisposisi = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { dari, kepada, instruksi, catatan, tanggal_disposisi, status } =
       req.body;
 
-    const result = await query(
-      `UPDATE public.disposisi SET
-        dari = COALESCE($1, dari),
-        kepada = COALESCE($2, kepada),
-        instruksi = COALESCE($3, instruksi),
-        catatan = COALESCE($4, catatan),
-        tanggal_disposisi = COALESCE($5, tanggal_disposisi),
-        status = COALESCE($6, status),
-        updated_at = CURRENT_TIMESTAMP
-       WHERE id = $7
-       RETURNING *`,
-      [dari, kepada, instruksi, catatan, tanggal_disposisi, status, id],
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Disposisi tidak ditemukan",
-      });
+    const existCheck = query(`SELECT * FROM disposisi WHERE id = ?`, [id]);
+    if (existCheck.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Disposisi tidak ditemukan" });
     }
 
-    res.status(200).json({
-      success: true,
-      message: "Disposisi berhasil diperbarui",
-      data: result.rows[0],
-    });
+    const current = existCheck.rows[0];
+
+    query(
+      `UPDATE disposisi SET
+        dari              = ?,
+        kepada            = ?,
+        instruksi         = ?,
+        catatan           = ?,
+        tanggal_disposisi = ?,
+        status            = ?,
+        updated_at        = datetime('now')
+       WHERE id = ?`,
+      [
+        dari ?? current.dari,
+        kepada ?? current.kepada,
+        instruksi ?? current.instruksi,
+        catatan ?? current.catatan,
+        tanggal_disposisi ?? current.tanggal_disposisi,
+        status ?? current.status,
+        id,
+      ],
+    );
+
+    const updated = query(`SELECT * FROM disposisi WHERE id = ?`, [id]);
+
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Disposisi berhasil diperbarui",
+        data: updated.rows[0],
+      });
   } catch (error) {
     next(error);
   }
 };
 
+// =============================================
+// DISPOSISI — DELETE
+// =============================================
 const deleteDisposisi = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const result = await query(
-      "DELETE FROM public.disposisi WHERE id = $1 RETURNING id",
-      [id],
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Disposisi tidak ditemukan",
-      });
+    const existCheck = query(`SELECT id FROM disposisi WHERE id = ?`, [id]);
+    if (existCheck.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Disposisi tidak ditemukan" });
     }
 
-    res.status(200).json({
-      success: true,
-      message: "Disposisi berhasil dihapus",
-    });
+    query(`DELETE FROM disposisi WHERE id = ?`, [id]);
+    res
+      .status(200)
+      .json({ success: true, message: "Disposisi berhasil dihapus" });
   } catch (error) {
     next(error);
   }
@@ -495,17 +504,21 @@ const deleteDisposisi = async (req, res, next) => {
 // =============================================
 const getStatistikSurat = async (req, res, next) => {
   try {
-    const result = await query(`
+    // SQLite tidak ada COUNT(*) FILTER atau date_trunc — pakai SUM(CASE WHEN) + strftime
+    const result = query(
+      `
       SELECT
-        COUNT(*) FILTER (WHERE jenis = 'masuk') AS total_masuk,
-        COUNT(*) FILTER (WHERE jenis = 'keluar') AS total_keluar,
-        COUNT(*) FILTER (WHERE status = 'baru') AS total_baru,
-        COUNT(*) FILTER (WHERE status = 'diproses') AS total_diproses,
-        COUNT(*) FILTER (WHERE status = 'selesai') AS total_selesai,
-        COUNT(*) FILTER (WHERE status = 'diarsipkan') AS total_diarsipkan,
-        COUNT(*) FILTER (WHERE tanggal_dokumen >= date_trunc('month', CURRENT_DATE)) AS total_bulan_ini
-      FROM public.surat
-    `);
+        SUM(CASE WHEN jenis = 'masuk' THEN 1 ELSE 0 END)        AS total_masuk,
+        SUM(CASE WHEN jenis = 'keluar' THEN 1 ELSE 0 END)       AS total_keluar,
+        SUM(CASE WHEN status = 'baru' THEN 1 ELSE 0 END)        AS total_baru,
+        SUM(CASE WHEN status = 'diproses' THEN 1 ELSE 0 END)    AS total_diproses,
+        SUM(CASE WHEN status = 'selesai' THEN 1 ELSE 0 END)     AS total_selesai,
+        SUM(CASE WHEN status = 'diarsipkan' THEN 1 ELSE 0 END)  AS total_diarsipkan,
+        SUM(CASE WHEN strftime('%Y-%m', tanggal_dokumen) = strftime('%Y-%m', 'now') THEN 1 ELSE 0 END) AS total_bulan_ini
+      FROM surat
+    `,
+      [],
+    );
 
     res.status(200).json({
       success: true,

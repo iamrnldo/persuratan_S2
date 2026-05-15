@@ -1,3 +1,4 @@
+// backend/src/app.js
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -10,14 +11,18 @@ const routes = require("./routes/index");
 const errorHandler = require("./middlewares/errorHandler");
 const notFound = require("./middlewares/notFound");
 const { generalLimiter } = require("./middlewares/rateLimiter");
+const { initDatabase } = require("./config/database"); // ← ganti dari pool ke initDatabase
+
+// Inisialisasi tabel SQLite saat startup
+initDatabase();
 
 const app = express();
 
 // ==================== Security Middleware ====================
 app.use(
   helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" }, // ← fix: izinkan static files lintas origin
-    contentSecurityPolicy: false, // ← fix: nonaktifkan CSP
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: false,
   }),
 );
 
@@ -60,7 +65,7 @@ app.use(
   "/uploads",
   express.static(path.join(__dirname, "uploads"), {
     setHeaders: (res) => {
-      res.set("Cross-Origin-Resource-Policy", "cross-origin"); // ← fix CORP header
+      res.set("Cross-Origin-Resource-Policy", "cross-origin");
       res.set("Access-Control-Allow-Origin", "*");
     },
   }),

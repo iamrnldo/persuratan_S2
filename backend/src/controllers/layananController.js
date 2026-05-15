@@ -1,3 +1,4 @@
+// backend/src/controllers/layananController.js
 const { query } = require("../config/database");
 const slugify = require("slugify");
 
@@ -8,30 +9,26 @@ const getAllLayanan = async (req, res, next) => {
 
     let conditions = [];
     let params = [];
-    let paramIndex = 1;
 
     if (is_active !== undefined) {
-      conditions.push(`is_active = $${paramIndex}`);
-      params.push(is_active === "true");
-      paramIndex++;
+      conditions.push(`is_active = ?`);
+      params.push(is_active === "true" ? 1 : 0);
     }
 
     const whereClause =
       conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
-    const countResult = await query(
-      `SELECT COUNT(*) FROM public.layanan ${whereClause}`,
+    const countResult = query(
+      `SELECT COUNT(*) as count FROM layanan ${whereClause}`,
       params,
     );
-    const total = parseInt(countResult.rows[0].count);
+    const total = countResult.rows[0].count;
 
-    params.push(parseInt(limit), offset);
-    const result = await query(
-      `SELECT * FROM public.layanan 
-       ${whereClause} 
-       ORDER BY urutan ASC, id ASC 
-       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-      params,
+    const result = query(
+      `SELECT * FROM layanan ${whereClause}
+       ORDER BY urutan ASC, id ASC
+       LIMIT ? OFFSET ?`,
+      [...params, parseInt(limit), offset],
     );
 
     res.status(200).json({
@@ -53,20 +50,21 @@ const getAllLayanan = async (req, res, next) => {
 const getLayananById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await query("SELECT * FROM public.layanan WHERE id = $1", [
-      id,
-    ]);
+    const result = query(`SELECT * FROM layanan WHERE id = ?`, [id]);
+
     if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Layanan tidak ditemukan",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "Layanan tidak ditemukan" });
     }
-    res.status(200).json({
-      success: true,
-      message: "Data layanan berhasil diambil",
-      data: result.rows[0],
-    });
+
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Data layanan berhasil diambil",
+        data: result.rows[0],
+      });
   } catch (error) {
     next(error);
   }
@@ -75,20 +73,21 @@ const getLayananById = async (req, res, next) => {
 const getLayananBySlug = async (req, res, next) => {
   try {
     const { slug } = req.params;
-    const result = await query("SELECT * FROM public.layanan WHERE slug = $1", [
-      slug,
-    ]);
+    const result = query(`SELECT * FROM layanan WHERE slug = ?`, [slug]);
+
     if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Layanan tidak ditemukan",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "Layanan tidak ditemukan" });
     }
-    res.status(200).json({
-      success: true,
-      message: "Data layanan berhasil diambil",
-      data: result.rows[0],
-    });
+
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Data layanan berhasil diambil",
+        data: result.rows[0],
+      });
   } catch (error) {
     next(error);
   }
@@ -110,22 +109,18 @@ const createLayanan = async (req, res, next) => {
     const generatedSlug =
       slug || slugify(nama, { lower: true, strict: true, locale: "id" });
 
-    const slugCheck = await query(
-      "SELECT id FROM public.layanan WHERE slug = $1",
-      [generatedSlug],
-    );
+    const slugCheck = query(`SELECT id FROM layanan WHERE slug = ?`, [
+      generatedSlug,
+    ]);
     if (slugCheck.rows.length > 0) {
-      return res.status(409).json({
-        success: false,
-        message: "Slug sudah digunakan",
-      });
+      return res
+        .status(409)
+        .json({ success: false, message: "Slug sudah digunakan" });
     }
 
-    const result = await query(
-      `INSERT INTO public.layanan 
-       (nama, slug, deskripsi, icon, persyaratan, prosedur, is_active, urutan) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
-       RETURNING *`,
+    query(
+      `INSERT INTO layanan (nama, slug, deskripsi, icon, persyaratan, prosedur, is_active, urutan)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         nama,
         generatedSlug,
@@ -133,16 +128,23 @@ const createLayanan = async (req, res, next) => {
         icon || null,
         persyaratan || null,
         prosedur || null,
-        is_active,
+        is_active ? 1 : 0,
         urutan,
       ],
     );
 
-    res.status(201).json({
-      success: true,
-      message: "Layanan berhasil dibuat",
-      data: result.rows[0],
-    });
+    const newData = query(
+      `SELECT * FROM layanan WHERE id = (SELECT last_insert_rowid())`,
+      [],
+    );
+
+    res
+      .status(201)
+      .json({
+        success: true,
+        message: "Layanan berhasil dibuat",
+        data: newData.rows[0],
+      });
   } catch (error) {
     next(error);
   }
@@ -162,16 +164,14 @@ const updateLayanan = async (req, res, next) => {
       urutan,
     } = req.body;
 
-    const existCheck = await query(
-      "SELECT id FROM public.layanan WHERE id = $1",
-      [id],
-    );
+    const existCheck = query(`SELECT * FROM layanan WHERE id = ?`, [id]);
     if (existCheck.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Layanan tidak ditemukan",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "Layanan tidak ditemukan" });
     }
+
+    const current = existCheck.rows[0];
 
     let newSlug = slug;
     if (nama && !slug) {
@@ -179,49 +179,57 @@ const updateLayanan = async (req, res, next) => {
     }
 
     if (newSlug) {
-      const slugCheck = await query(
-        "SELECT id FROM public.layanan WHERE slug = $1 AND id != $2",
+      const slugCheck = query(
+        `SELECT id FROM layanan WHERE slug = ? AND id != ?`,
         [newSlug, id],
       );
       if (slugCheck.rows.length > 0) {
-        return res.status(409).json({
-          success: false,
-          message: "Slug sudah digunakan",
-        });
+        return res
+          .status(409)
+          .json({ success: false, message: "Slug sudah digunakan" });
       }
     }
 
-    const result = await query(
-      `UPDATE public.layanan 
-       SET nama = COALESCE($1, nama),
-           slug = COALESCE($2, slug),
-           deskripsi = COALESCE($3, deskripsi),
-           icon = COALESCE($4, icon),
-           persyaratan = COALESCE($5, persyaratan),
-           prosedur = COALESCE($6, prosedur),
-           is_active = COALESCE($7, is_active),
-           urutan = COALESCE($8, urutan),
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $9 
-       RETURNING *`,
+    // Resolve is_active ke integer
+    let isActiveVal = current.is_active;
+    if (is_active !== undefined) {
+      isActiveVal = is_active ? 1 : 0;
+    }
+
+    query(
+      `UPDATE layanan SET
+        nama        = ?,
+        slug        = ?,
+        deskripsi   = ?,
+        icon        = ?,
+        persyaratan = ?,
+        prosedur    = ?,
+        is_active   = ?,
+        urutan      = ?,
+        updated_at  = datetime('now')
+       WHERE id = ?`,
       [
-        nama,
-        newSlug,
-        deskripsi,
-        icon,
-        persyaratan,
-        prosedur,
-        is_active,
-        urutan,
+        nama ?? current.nama,
+        newSlug ?? current.slug,
+        deskripsi ?? current.deskripsi,
+        icon ?? current.icon,
+        persyaratan ?? current.persyaratan,
+        prosedur ?? current.prosedur,
+        isActiveVal,
+        urutan ?? current.urutan,
         id,
       ],
     );
 
-    res.status(200).json({
-      success: true,
-      message: "Layanan berhasil diupdate",
-      data: result.rows[0],
-    });
+    const updated = query(`SELECT * FROM layanan WHERE id = ?`, [id]);
+
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Layanan berhasil diupdate",
+        data: updated.rows[0],
+      });
   } catch (error) {
     next(error);
   }
@@ -230,20 +238,18 @@ const updateLayanan = async (req, res, next) => {
 const deleteLayanan = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await query(
-      "DELETE FROM public.layanan WHERE id = $1 RETURNING id",
-      [id],
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Layanan tidak ditemukan",
-      });
+
+    const existCheck = query(`SELECT id FROM layanan WHERE id = ?`, [id]);
+    if (existCheck.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Layanan tidak ditemukan" });
     }
-    res.status(200).json({
-      success: true,
-      message: "Layanan berhasil dihapus",
-    });
+
+    query(`DELETE FROM layanan WHERE id = ?`, [id]);
+    res
+      .status(200)
+      .json({ success: true, message: "Layanan berhasil dihapus" });
   } catch (error) {
     next(error);
   }
@@ -252,22 +258,28 @@ const deleteLayanan = async (req, res, next) => {
 const toggleActiveLayanan = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await query(
-      `UPDATE public.layanan 
-       SET is_active = NOT is_active, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $1 RETURNING *`,
-      [id],
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Layanan tidak ditemukan",
-      });
+
+    const current = query(`SELECT id, is_active FROM layanan WHERE id = ?`, [
+      id,
+    ]);
+    if (current.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Layanan tidak ditemukan" });
     }
+
+    const newStatus = current.rows[0].is_active ? 0 : 1;
+    query(
+      `UPDATE layanan SET is_active = ?, updated_at = datetime('now') WHERE id = ?`,
+      [newStatus, id],
+    );
+
+    const updated = query(`SELECT * FROM layanan WHERE id = ?`, [id]);
+
     res.status(200).json({
       success: true,
-      message: `Layanan berhasil di${result.rows[0].is_active ? "aktifkan" : "nonaktifkan"}`,
-      data: result.rows[0],
+      message: `Layanan berhasil di${updated.rows[0].is_active ? "aktifkan" : "nonaktifkan"}`,
+      data: updated.rows[0],
     });
   } catch (error) {
     next(error);
