@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "/home/iamrnldo/Projects/persuratan_S2/backend/logs/.ba1bde63962c0d0f2e7fe66df6fa0e54175a545e-audit.json",
+    "files": [
+        {
+            "date": 1778945581022,
+            "name": "/home/iamrnldo/Projects/persuratan_S2/backend/logs/error-2026-05-16.log",
+            "hash": "035c34851d0e258d81b07de11a159ecdb960082ce45f6a51be80299af3587f45"
+        }
+    ],
+    "hashType": "sha256"
+}

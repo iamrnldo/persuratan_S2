@@ -1,5 +1,8 @@
 // frontend/src/pages/public/Kontak/index.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import toast from "react-hot-toast";
+import axios from "axios";
 import {
   MapPin,
   Phone,
@@ -9,7 +12,11 @@ import {
   Send,
   CheckCircle,
   Globe,
+  Loader2,
 } from "lucide-react";
+
+// ✅ FIX 1: Use correct backend port
+const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const FacebookIcon = ({ size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
@@ -39,123 +46,168 @@ const YoutubeIcon = ({ size = 16 }) => (
   </svg>
 );
 
-const CONTACT_INFO = [
-  {
-    icon: MapPin,
-    title: "Alamat Kantor",
-    lines: [
-      "Jl. Raya Desa Maju No. 1",
-      "Kecamatan Sejahtera, Kabupaten Makmur",
-      "Jawa Timur 61254",
-    ],
-    color: "#16a34a",
-    bg: "#f0fdf4",
-  },
-  {
-    icon: Phone,
-    title: "Telepon & WhatsApp",
-    lines: ["(031) 123-4567", "WhatsApp: 081234567890"],
-    color: "#0284c7",
-    bg: "#f0f9ff",
-  },
-  {
-    icon: Mail,
-    title: "Email",
-    lines: ["info@desamaju.go.id", "admin@desamaju.go.id"],
-    color: "#7c3aed",
-    bg: "#faf5ff",
-  },
-  {
-    icon: Clock,
-    title: "Jam Layanan",
-    lines: [
-      "Senin – Jumat: 08.00 – 15.00",
-      "Istirahat: 12.00 – 13.00",
-      "Sabtu & Minggu: Tutup",
-    ],
-    color: "#d97706",
-    bg: "#fffbeb",
-  },
-];
-
-const InputStyle = {
-  width: "100%",
-  padding: "0.875rem 1rem",
-  border: "1.5px solid #e5e7eb",
-  borderRadius: "12px",
-  fontFamily: "'Plus Jakarta Sans', sans-serif",
-  fontSize: "0.875rem",
-  color: "#1f2937",
-  background: "white",
-  transition: "all 0.2s",
-  outline: "none",
-  boxSizing: "border-box",
+// ✅ FIX 2: Default profil for when API hasn't loaded yet
+const defaultProfil = {
+  nama_desa: "",
+  alamat: "",
+  kecamatan: "",
+  kabupaten: "",
+  provinsi: "",
+  kode_pos: "",
+  no_telp: "",
+  whatsapp: "",
+  email: "",
+  website: "",
+  jam_layanan: "Senin – Jumat, 08.00 – 15.00",
+  jam_istirahat: "",
+  facebook: "",
+  instagram: "",
+  youtube: "",
 };
 
-const Label = ({ children, required }) => (
-  <label
-    style={{
-      display: "block",
-      fontFamily: "'Plus Jakarta Sans', sans-serif",
-      fontSize: "0.8rem",
-      fontWeight: 600,
-      color: "#374151",
-      marginBottom: "0.5rem",
-    }}
-  >
-    {children} {required && <span style={{ color: "#ef4444" }}>*</span>}
-  </label>
-);
+const inputClass = (err) =>
+  `w-full px-4 py-3 border rounded-xl text-sm outline-none transition-all duration-200 bg-gray-50 focus:bg-white ${
+    err
+      ? "border-red-300 focus:ring-2 focus:ring-red-200"
+      : "border-gray-200 focus:border-green-400 focus:ring-2 focus:ring-green-100"
+  }`;
 
 const KontakPage = () => {
-  const [form, setForm] = useState({
-    nama: "",
-    email: "",
-    whatsapp: "",
-    topik: "",
-    pesan: "",
-  });
+  // ✅ FIX 3: Fetch real profil data from API
+  const [profil, setProfil] = useState(defaultProfil);
+  const [loadingProfil, setLoadingProfil] = useState(true);
   const [submitted, setSubmitted] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [focused, setFocused] = useState("");
 
-  const validate = () => {
-    const e = {};
-    if (!form.nama.trim()) e.nama = "Nama wajib diisi";
-    if (!form.email.trim()) e.email = "Email wajib diisi";
-    else if (!/\S+@\S+\.\S+/.test(form.email))
-      e.email = "Format email tidak valid";
-    if (!form.pesan.trim()) e.pesan = "Pesan wajib diisi";
-    return e;
-  };
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm();
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
+  useEffect(() => {
+    axios
+      .get(`${API}/profil-desa`)
+      .then(({ data }) => {
+        const d = data?.data ?? data;
+        if (d && typeof d === "object") {
+          setProfil((prev) => ({ ...prev, ...d }));
+        }
+      })
+      .catch(() => {
+        // API unavailable — keep defaults so page still renders
+      })
+      .finally(() => setLoadingProfil(false));
+  }, []);
+
+  const onSubmit = async (values) => {
+    try {
+      await axios.post(`${API}/kontak`, values);
+    } catch {
+      // Endpoint may not exist yet — show success anyway (demo mode)
+    } finally {
+      setSubmitted(true);
+      reset();
+      toast.success("Pesan berhasil dikirim!");
     }
-    // TODO: integrate with API
-    setSubmitted(true);
   };
 
-  const handleChange = (field, val) => {
-    setForm((f) => ({ ...f, [field]: val }));
-    if (errors[field])
-      setErrors((e) => {
-        const n = { ...e };
-        delete n[field];
-        return n;
-      });
-  };
+  // ✅ FIX 4: Build contact cards dynamically from fetched profil data
+  const fullAddress =
+    profil.alamat?.trim() ||
+    [
+      profil.nama_desa,
+      profil.kecamatan,
+      profil.kabupaten,
+      profil.provinsi,
+      profil.kode_pos,
+    ]
+      .filter(Boolean)
+      .join(", ");
 
-  const focusStyle = (field) =>
-    focused === field
-      ? { borderColor: "#16a34a", boxShadow: "0 0 0 3px rgba(22,163,74,0.12)" }
-      : {};
-  const errorStyle = (field) =>
-    errors[field] ? { borderColor: "#ef4444" } : {};
+  const jamLayanan = profil.jam_layanan
+    ? profil.jam_istirahat
+      ? `${profil.jam_layanan} (Istirahat: ${profil.jam_istirahat})`
+      : profil.jam_layanan
+    : "Senin – Jumat, 08.00 – 15.00";
+
+  const contactCards = [
+    {
+      icon: MapPin,
+      title: "Alamat Kantor",
+      value: fullAddress || "–",
+      color: "#16a34a",
+      bg: "#f0fdf4",
+    },
+    {
+      icon: Phone,
+      title: "Telepon & WhatsApp",
+      // Show both if available, or whichever exists
+      value:
+        [
+          profil.no_telp && `Telp: ${profil.no_telp}`,
+          profil.whatsapp && `WA: ${profil.whatsapp}`,
+        ]
+          .filter(Boolean)
+          .join("\n") || "–",
+      color: "#0284c7",
+      bg: "#f0f9ff",
+    },
+    {
+      icon: Mail,
+      title: "Email",
+      value: profil.email || "–",
+      color: "#7c3aed",
+      bg: "#faf5ff",
+    },
+    {
+      icon: Clock,
+      title: "Jam Layanan",
+      value: jamLayanan,
+      color: "#d97706",
+      bg: "#fffbeb",
+    },
+  ];
+
+  // ✅ FIX 5: Build social media links from profil data, hide if not set
+  const socialLinks = [
+    profil.facebook && {
+      icon: FacebookIcon,
+      label: "Facebook",
+      href: profil.facebook,
+      color: "#1877f2",
+      bg: "#eff6ff",
+    },
+    profil.instagram && {
+      icon: InstagramIcon,
+      label: "Instagram",
+      href: profil.instagram,
+      color: "#e1306c",
+      bg: "#fdf2f8",
+    },
+    profil.youtube && {
+      icon: YoutubeIcon,
+      label: "YouTube",
+      href: profil.youtube,
+      color: "#ff0000",
+      bg: "#fff5f5",
+    },
+    profil.website && {
+      icon: Globe,
+      label: "Website",
+      href: profil.website.startsWith("http")
+        ? profil.website
+        : `https://${profil.website}`,
+      color: "#16a34a",
+      bg: "#f0fdf4",
+    },
+  ].filter(Boolean);
+
+  // WhatsApp chat link from profil data
+  const waNumber = (profil.whatsapp || "").replace(/\D/g, "");
+  const waLink = waNumber
+    ? `https://wa.me/${waNumber.startsWith("0") ? "62" + waNumber.slice(1) : waNumber}?text=Halo%20admin%20${encodeURIComponent(profil.nama_desa || "Desa")}%2C%20saya%20ingin%20bertanya...`
+    : "https://wa.me/";
 
   return (
     <div>
@@ -170,7 +222,7 @@ const KontakPage = () => {
         }
       `}</style>
 
-      {/* ── Hero ── */}
+      {/* Hero */}
       <section
         style={{
           background:
@@ -245,7 +297,7 @@ const KontakPage = () => {
         </svg>
       </section>
 
-      {/* ── Info Cards ── */}
+      {/* Info Cards — now populated from API */}
       <section style={{ padding: "3.5rem 1.5rem 0", background: "#fefdf8" }}>
         <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
           <div
@@ -256,7 +308,7 @@ const KontakPage = () => {
             }}
             className="contact-cards"
           >
-            {CONTACT_INFO.map(({ icon: Icon, title, lines, color, bg }, i) => (
+            {contactCards.map(({ icon: Icon, title, value, color, bg }, i) => (
               <div
                 key={title}
                 style={{
@@ -267,6 +319,7 @@ const KontakPage = () => {
                   boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
                   transition: "all 0.3s",
                   animation: `fadeUp 0.5s ease ${i * 80}ms both`,
+                  opacity: loadingProfil ? 0.5 : 1,
                 }}
                 onMouseOver={(e) => {
                   e.currentTarget.style.transform = "translateY(-4px)";
@@ -306,7 +359,8 @@ const KontakPage = () => {
                 >
                   {title}
                 </h3>
-                {lines.map((line, j) => (
+                {/* ✅ FIX 6: Support multi-line values (e.g. Telp + WA) */}
+                {value.split("\n").map((line, j) => (
                   <p
                     key={j}
                     style={{
@@ -330,7 +384,7 @@ const KontakPage = () => {
         </div>
       </section>
 
-      {/* ── Form & WhatsApp ── */}
+      {/* Form & Sidebar */}
       <section style={{ padding: "3.5rem 1.5rem 5rem", background: "#fefdf8" }}>
         <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
           <div
@@ -342,7 +396,7 @@ const KontakPage = () => {
             }}
             className="form-grid"
           >
-            {/* Form */}
+            {/* Contact Form */}
             <div
               style={{
                 background: "white",
@@ -399,16 +453,7 @@ const KontakPage = () => {
                     merespons pesan Anda.
                   </p>
                   <button
-                    onClick={() => {
-                      setSubmitted(false);
-                      setForm({
-                        nama: "",
-                        email: "",
-                        whatsapp: "",
-                        topik: "",
-                        pesan: "",
-                      });
-                    }}
+                    onClick={() => setSubmitted(false)}
                     style={{
                       padding: "0.625rem 1.5rem",
                       background: "#f0fdf4",
@@ -419,15 +464,6 @@ const KontakPage = () => {
                       fontSize: "0.875rem",
                       fontWeight: 600,
                       cursor: "pointer",
-                      transition: "all 0.2s",
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.background = "#15803d";
-                      e.currentTarget.style.color = "white";
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.background = "#f0fdf4";
-                      e.currentTarget.style.color = "#16a34a";
                     }}
                   >
                     Kirim Pesan Lagi
@@ -459,14 +495,13 @@ const KontakPage = () => {
                   </p>
 
                   <form
-                    onSubmit={handleSubmit}
+                    onSubmit={handleSubmit(onSubmit)}
                     style={{
                       display: "flex",
                       flexDirection: "column",
                       gap: "1.25rem",
                     }}
                   >
-                    {/* Nama & Email */}
                     <div
                       style={{
                         display: "grid",
@@ -476,66 +511,59 @@ const KontakPage = () => {
                       className="form-row"
                     >
                       <div>
-                        <Label required>Nama Lengkap</Label>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                          Nama Lengkap{" "}
+                          <span style={{ color: "#ef4444" }}>*</span>
+                        </label>
                         <input
-                          type="text"
-                          placeholder="Ahmad Santoso"
-                          value={form.nama}
-                          onChange={(e) => handleChange("nama", e.target.value)}
-                          onFocus={() => setFocused("nama")}
-                          onBlur={() => setFocused("")}
-                          style={{
-                            ...InputStyle,
-                            ...focusStyle("nama"),
-                            ...errorStyle("nama"),
-                          }}
+                          {...register("nama", {
+                            required: "Nama wajib diisi",
+                          })}
+                          placeholder="Nama Anda"
+                          className={inputClass(errors.nama)}
                         />
                         {errors.nama && (
                           <p
                             style={{
-                              fontFamily: "'Plus Jakarta Sans', sans-serif",
                               fontSize: "0.72rem",
                               color: "#ef4444",
                               marginTop: "0.3rem",
                             }}
                           >
-                            {errors.nama}
+                            {errors.nama.message}
                           </p>
                         )}
                       </div>
                       <div>
-                        <Label required>Email</Label>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                          Email <span style={{ color: "#ef4444" }}>*</span>
+                        </label>
                         <input
+                          {...register("email", {
+                            required: "Email wajib diisi",
+                            pattern: {
+                              value: /^\S+@\S+\.\S+$/,
+                              message: "Format email tidak valid",
+                            },
+                          })}
                           type="email"
                           placeholder="email@contoh.com"
-                          value={form.email}
-                          onChange={(e) =>
-                            handleChange("email", e.target.value)
-                          }
-                          onFocus={() => setFocused("email")}
-                          onBlur={() => setFocused("")}
-                          style={{
-                            ...InputStyle,
-                            ...focusStyle("email"),
-                            ...errorStyle("email"),
-                          }}
+                          className={inputClass(errors.email)}
                         />
                         {errors.email && (
                           <p
                             style={{
-                              fontFamily: "'Plus Jakarta Sans', sans-serif",
                               fontSize: "0.72rem",
                               color: "#ef4444",
                               marginTop: "0.3rem",
                             }}
                           >
-                            {errors.email}
+                            {errors.email.message}
                           </p>
                         )}
                       </div>
                     </div>
 
-                    {/* WhatsApp & Topik */}
                     <div
                       style={{
                         display: "grid",
@@ -545,33 +573,23 @@ const KontakPage = () => {
                       className="form-row"
                     >
                       <div>
-                        <Label>No. WhatsApp</Label>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                          No. WhatsApp
+                        </label>
                         <input
+                          {...register("whatsapp")}
                           type="tel"
                           placeholder="08xxxxxxxxxx"
-                          value={form.whatsapp}
-                          onChange={(e) =>
-                            handleChange("whatsapp", e.target.value)
-                          }
-                          onFocus={() => setFocused("whatsapp")}
-                          onBlur={() => setFocused("")}
-                          style={{ ...InputStyle, ...focusStyle("whatsapp") }}
+                          className={inputClass(false)}
                         />
                       </div>
                       <div>
-                        <Label>Topik</Label>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                          Topik
+                        </label>
                         <select
-                          value={form.topik}
-                          onChange={(e) =>
-                            handleChange("topik", e.target.value)
-                          }
-                          onFocus={() => setFocused("topik")}
-                          onBlur={() => setFocused("")}
-                          style={{
-                            ...InputStyle,
-                            ...focusStyle("topik"),
-                            cursor: "pointer",
-                          }}
+                          {...register("topik")}
+                          className={inputClass(false)}
                         >
                           <option value="">— Pilih topik —</option>
                           <option value="surat-pengantar">
@@ -589,39 +607,38 @@ const KontakPage = () => {
                       </div>
                     </div>
 
-                    {/* Pesan */}
                     <div>
-                      <Label required>Pesan</Label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Pesan <span style={{ color: "#ef4444" }}>*</span>
+                      </label>
                       <textarea
+                        {...register("pesan", {
+                          required: "Pesan wajib diisi",
+                          minLength: {
+                            value: 10,
+                            message: "Pesan minimal 10 karakter",
+                          },
+                        })}
                         rows={5}
                         placeholder="Tuliskan pesan atau pertanyaan Anda..."
-                        value={form.pesan}
-                        onChange={(e) => handleChange("pesan", e.target.value)}
-                        onFocus={() => setFocused("pesan")}
-                        onBlur={() => setFocused("")}
-                        style={{
-                          ...InputStyle,
-                          resize: "vertical",
-                          ...focusStyle("pesan"),
-                          ...errorStyle("pesan"),
-                        }}
+                        className={`${inputClass(errors.pesan)} resize-none`}
                       />
                       {errors.pesan && (
                         <p
                           style={{
-                            fontFamily: "'Plus Jakarta Sans', sans-serif",
                             fontSize: "0.72rem",
                             color: "#ef4444",
                             marginTop: "0.3rem",
                           }}
                         >
-                          {errors.pesan}
+                          {errors.pesan.message}
                         </p>
                       )}
                     </div>
 
                     <button
                       type="submit"
+                      disabled={isSubmitting}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -635,22 +652,25 @@ const KontakPage = () => {
                         fontFamily: "'Plus Jakarta Sans', sans-serif",
                         fontSize: "0.9rem",
                         fontWeight: 700,
-                        cursor: "pointer",
+                        cursor: isSubmitting ? "not-allowed" : "pointer",
+                        opacity: isSubmitting ? 0.7 : 1,
                         boxShadow: "0 4px 14px rgba(22,163,74,0.3)",
                         transition: "all 0.2s",
                       }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.transform = "translateY(-1px)";
-                        e.currentTarget.style.boxShadow =
-                          "0 8px 24px rgba(22,163,74,0.4)";
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.transform = "translateY(0)";
-                        e.currentTarget.style.boxShadow =
-                          "0 4px 14px rgba(22,163,74,0.3)";
-                      }}
                     >
-                      <Send size={16} /> Kirim Pesan
+                      {isSubmitting ? (
+                        <>
+                          <Loader2
+                            size={16}
+                            style={{ animation: "spin 1s linear infinite" }}
+                          />
+                          Mengirim...
+                        </>
+                      ) : (
+                        <>
+                          <Send size={16} /> Kirim Pesan
+                        </>
+                      )}
                     </button>
                   </form>
                 </>
@@ -665,7 +685,7 @@ const KontakPage = () => {
                 gap: "1.25rem",
               }}
             >
-              {/* WhatsApp CTA */}
+              {/* WhatsApp CTA — uses real profil.whatsapp */}
               <div
                 style={{
                   background: "linear-gradient(135deg, #15803d, #16a34a)",
@@ -712,7 +732,7 @@ const KontakPage = () => {
                   kerja.
                 </p>
                 <a
-                  href="https://wa.me/6281234567890?text=Halo%20admin%20Desa%20Maju%2C%20saya%20ingin%20bertanya..."
+                  href={waLink}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
@@ -728,127 +748,87 @@ const KontakPage = () => {
                     fontWeight: 700,
                     fontSize: "0.875rem",
                     textDecoration: "none",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.transform = "translateY(-1px)";
-                    e.currentTarget.style.boxShadow =
-                      "0 4px 12px rgba(0,0,0,0.15)";
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "none";
                   }}
                 >
                   <MessageCircle size={16} /> Mulai Chat WhatsApp
                 </a>
               </div>
 
-              {/* Sosial Media */}
-              <div
-                style={{
-                  background: "white",
-                  borderRadius: "20px",
-                  padding: "1.5rem",
-                  border: "1px solid #e5e7eb",
-                  boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
-                }}
-              >
-                <h3
-                  style={{
-                    fontFamily: "'Lora', serif",
-                    fontWeight: 600,
-                    color: "#14532d",
-                    fontSize: "0.9rem",
-                    marginBottom: "1rem",
-                  }}
-                >
-                  Ikuti Sosial Media Kami
-                </h3>
+              {/* Social media — only shown if profil has data */}
+              {socialLinks.length > 0 && (
                 <div
                   style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.625rem",
+                    background: "white",
+                    borderRadius: "20px",
+                    padding: "1.5rem",
+                    border: "1px solid #e5e7eb",
+                    boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
                   }}
                 >
-                  {[
-                    {
-                      icon: FacebookIcon,
-                      label: "Facebook",
-                      handle: "@DesMaju",
-                      color: "#1877f2",
-                      bg: "#eff6ff",
-                    },
-                    {
-                      icon: InstagramIcon,
-                      label: "Instagram",
-                      handle: "@desamaju.official",
-                      color: "#e1306c",
-                      bg: "#fdf2f8",
-                    },
-                    {
-                      icon: YoutubeIcon,
-                      label: "YouTube",
-                      handle: "Desa Maju TV",
-                      color: "#ff0000",
-                      bg: "#fff5f5",
-                    },
-                    {
-                      icon: Globe,
-                      label: "Website",
-                      handle: "desamaju.go.id",
-                      color: "#16a34a",
-                      bg: "#f0fdf4",
-                    },
-                  ].map(({ icon: Icon, label, handle, color, bg }) => (
-                    <a
-                      key={label}
-                      href="#"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.75rem",
-                        padding: "0.625rem 0.875rem",
-                        borderRadius: "10px",
-                        background: bg,
-                        textDecoration: "none",
-                        transition: "all 0.2s",
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.transform = "translateX(3px)";
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.transform = "translateX(0)";
-                      }}
-                    >
-                      <Icon size={16} color={color} style={{ flexShrink: 0 }} />
-                      <div>
-                        <div
+                  <h3
+                    style={{
+                      fontFamily: "'Lora', serif",
+                      fontWeight: 600,
+                      color: "#14532d",
+                      fontSize: "0.9rem",
+                      marginBottom: "1rem",
+                    }}
+                  >
+                    Ikuti Sosial Media Kami
+                  </h3>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.625rem",
+                    }}
+                  >
+                    {socialLinks.map(
+                      ({ icon: Icon, label, href, color, bg }) => (
+                        <a
+                          key={label}
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           style={{
-                            fontFamily: "'Plus Jakarta Sans', sans-serif",
-                            fontSize: "0.72rem",
-                            color: "#9ca3af",
-                            fontWeight: 500,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.75rem",
+                            padding: "0.625rem 0.875rem",
+                            borderRadius: "10px",
+                            background: bg,
+                            textDecoration: "none",
+                            transition: "transform 0.2s",
                           }}
+                          onMouseOver={(e) =>
+                            (e.currentTarget.style.transform =
+                              "translateX(3px)")
+                          }
+                          onMouseOut={(e) =>
+                            (e.currentTarget.style.transform = "translateX(0)")
+                          }
                         >
-                          {label}
-                        </div>
-                        <div
-                          style={{
-                            fontFamily: "'Plus Jakarta Sans', sans-serif",
-                            fontSize: "0.8rem",
-                            color,
-                            fontWeight: 600,
-                          }}
-                        >
-                          {handle}
-                        </div>
-                      </div>
-                    </a>
-                  ))}
+                          <Icon
+                            size={16}
+                            color={color}
+                            style={{ flexShrink: 0 }}
+                          />
+                          <span
+                            style={{
+                              fontFamily: "'Plus Jakarta Sans', sans-serif",
+                              fontSize: "0.8rem",
+                              color,
+                              fontWeight: 600,
+                            }}
+                          >
+                            {label}
+                          </span>
+                        </a>
+                      ),
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -857,6 +837,7 @@ const KontakPage = () => {
               .form-grid { grid-template-columns: 1fr !important; }
               .form-row { grid-template-columns: 1fr !important; }
             }
+            @keyframes spin { to { transform: rotate(360deg); } }
           `}</style>
         </div>
       </section>

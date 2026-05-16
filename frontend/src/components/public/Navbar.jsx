@@ -16,6 +16,8 @@ import {
   Layers,
 } from "lucide-react";
 
+import { profilDesaService } from "../../api/profilDesaService";
+
 const navLinks = [
   { label: "Beranda", path: "/", icon: Home },
   { label: "Profil Desa", path: "/profil-desa", icon: Info },
@@ -38,9 +40,22 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [mobileExpanded, setMobileExpanded] = useState(null);
+  const [namaDesa, setNamaDesa] = useState("Desa Sukamaju");
   const location = useLocation();
   const navRef = useRef(null);
-  const dropdownRef = useRef(null);
+
+  /* ── fetch nama desa ── */
+  useEffect(() => {
+    profilDesaService
+      .get()
+      .then((res) => {
+        const nama = res?.data?.nama_desa || res?.nama_desa;
+        if (nama) setNamaDesa(nama);
+      })
+      .catch(() => {
+        // silently fall back to default
+      });
+  }, []);
 
   /* ── scroll effect ── */
   useEffect(() => {
@@ -97,13 +112,16 @@ export default function Navbar() {
           <div className="flex items-center justify-between h-16 lg:h-18">
             {/* ── Logo ── */}
             <Link to="/" className="flex items-center gap-2.5 group shrink-0">
-              <div className="relative w-10 h-10 bg-gradient-to-br from-green-500 to-green-700 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-green-300 transition-shadow duration-300 group-hover:scale-105 transform">
-                <Leaf className="w-5 h-5 text-white" />
-                <div className="absolute inset-0 rounded-xl bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
+              <div className="relative w-10 h-10 overflow-hidden group-hover:shadow-green-300 transition-shadow duration-300 group-hover:scale-105 transform">
+                <img
+                  src="/src/assets/logo.png"
+                  alt={`Logo ${namaDesa}`}
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div className="hidden sm:block">
                 <p className="text-sm font-bold text-green-800 leading-tight group-hover:text-green-600 transition-colors">
-                  Desa Sukamaju
+                  {namaDesa}
                 </p>
                 <p className="text-xs text-green-500 leading-tight font-medium">
                   Sistem Persuratan
@@ -247,9 +265,7 @@ export default function Navbar() {
                 <Leaf className="w-4 h-4 text-white" />
               </div>
               <div>
-                <p className="text-sm font-bold text-green-800">
-                  Desa Sukamaju
-                </p>
+                <p className="text-sm font-bold text-green-800">{namaDesa}</p>
                 <p className="text-xs text-green-500">Sistem Persuratan</p>
               </div>
             </div>
@@ -278,9 +294,7 @@ export default function Navbar() {
                           ? "bg-green-50 text-green-700"
                           : "text-gray-600 hover:bg-green-50 hover:text-green-700"
                       }`}
-                      style={{
-                        animationDelay: `${idx * 50}ms`,
-                      }}
+                      style={{ animationDelay: `${idx * 50}ms` }}
                     >
                       <div className="flex items-center gap-3">
                         <link.icon className="w-4 h-4 shrink-0" />
