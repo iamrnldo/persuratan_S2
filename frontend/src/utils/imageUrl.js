@@ -1,11 +1,11 @@
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api/v1";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5174/api/v1";
 
 const getBaseUrl = () => {
   try {
     const url = new URL(API_URL);
     return url.origin;
   } catch {
-    return "http://localhost:5000";
+    return "http://localhost:5174";
   }
 };
 
